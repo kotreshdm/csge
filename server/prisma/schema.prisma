@@ -1,0 +1,95 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Member {
+  memberId BigInt @id @default(autoincrement())
+
+  // Membership
+  memberCode String       @unique @db.VarChar(50)
+  memberType MemberType   @default(MEMBER)
+  status     MemberStatus @default(ACTIVE)
+
+  // Personal details
+  name       String  @db.VarChar(150)
+  fatherName String? @db.VarChar(150)
+  spouseName String? @db.VarChar(150)
+  careOfName String? @db.VarChar(150)
+
+  gender Gender?
+  dob    DateTime?
+
+  // Contact
+  mobile          String? @db.VarChar(20)
+  alternateMobile String? @db.VarChar(20)
+  email           String? @db.VarChar(150)
+
+  // Current address
+  addressLine1 String? @db.VarChar(255)
+  addressLine2 String? @db.VarChar(255)
+  city         String? @db.VarChar(100)
+  district     String? @db.VarChar(100)
+  postalCode   String? @db.VarChar(20)
+
+  // Identity / KYC
+  aadhaarNumber String? @db.VarChar(20)
+  panNumber     String? @db.VarChar(20)
+  otherId       String? @db.VarChar(20)
+
+  // Membership dates
+  joinDate       DateTime?
+  membershipDate DateTime?
+
+  // Nominee
+  nomineeName        String?   @db.VarChar(150)
+  nomineeRelation    String?   @db.VarChar(50)
+  nomineeMobile      String?   @db.VarChar(20)
+  nomineeEmail       String?   @db.VarChar(150)
+  nomineeAddress     String?   @db.VarChar(500)
+  nomineeDateOfBirth DateTime?
+
+  // Login
+  passwordHash String? @db.VarChar(255)
+
+  // Additional information
+  occupation String? @db.VarChar(150)
+  remarks    String? @db.Text
+
+  // Audit
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([name])
+  @@index([mobile])
+  @@index([city])
+  @@index([memberType])
+  @@index([status])
+  @@index([panNumber])
+  @@index([aadhaarNumber])
+
+  @@map("members")
+}
+
+enum MemberType {
+  SUPERUSER
+  MEMBER
+  ASSOCIATE
+}
+
+enum MemberStatus {
+  ACTIVE
+  INACTIVE
+  RESIGNED
+  DECEASED
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
