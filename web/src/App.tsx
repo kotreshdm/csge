@@ -4,39 +4,46 @@ import { useSelector } from "react-redux";
 import { getHealth } from "./api/health";
 import type { RootState } from "./store";
 
+import Header from "./components/layout/Header";
+import Footer from "./components/layout/Footer";
+import AppRoutes from "./routes/AppRoutes";
+
 function App() {
   const serverStatus = useSelector((state: RootState) => state.serverStatus);
 
   useEffect(() => {
     const checkServer = () => {
-      getHealth().catch(() => {
-        // Redux status is updated inside client.ts
-      });
+      getHealth().catch(() => {});
     };
 
-    // Initial check
     checkServer();
 
-    // Every 5 minutes
     const interval = window.setInterval(checkServer, 5 * 60 * 1000);
 
-    return () => {
-      window.clearInterval(interval);
-    };
+    return () => window.clearInterval(interval);
   }, []);
 
   return (
-    <div>
-      <h1>Member Management</h1>
+    <div className='flex min-h-screen flex-col bg-muted/30'>
+      <Header />
 
-      {serverStatus.status === "OFFLINE" ? (
-        <div>
-          <h2>Server Unavailable</h2>
-          <p>The server is currently unavailable. Please try again later.</p>
-        </div>
-      ) : (
-        <p>API Status: {serverStatus.message}</p>
-      )}
+      <main className='flex-1'>
+        {serverStatus.status === "OFFLINE" ? (
+          <div className='flex min-h-[calc(100vh-8rem)] items-center justify-center px-4'>
+            <div className='text-center'>
+              <h2 className='text-xl font-semibold'>Server Unavailable</h2>
+
+              <p className='mt-2 text-sm text-muted-foreground'>
+                The server is currently unavailable. Please try again later.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <AppRoutes />
+        )}
+      </main>
+
+      <Footer />
     </div>
   );
 }
