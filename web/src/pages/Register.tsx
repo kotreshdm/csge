@@ -13,6 +13,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { registerMember } from "../api/auth";
+import { toast } from "sonner";
 
 function Register() {
   const [memberCode, setMemberCode] = useState("");
@@ -22,17 +24,29 @@ function Register() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    console.log({
-      memberCode,
-      name,
-      mobile,
-      email,
-      password,
-      confirmPassword,
-    });
+    try {
+      const response = await registerMember({
+        memberCode,
+        name,
+        mobile,
+        email,
+        password,
+        confirmPassword,
+      });
+
+      toast.success(response.message || "Account created successfully.");
+    } catch (error) {
+      const apiError = error as {
+        message?: string;
+      };
+
+      toast.error(
+        apiError.message || "Unable to create account. Please try again.",
+      );
+    }
   };
 
   return (

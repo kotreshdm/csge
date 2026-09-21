@@ -16,10 +16,17 @@ model Member {
   status     MemberStatus @default(ACTIVE)
 
   // Personal details
-  name       String  @db.VarChar(150)
-  fatherName String? @db.VarChar(150)
-  spouseName String? @db.VarChar(150)
-  careOfName String? @db.VarChar(150)
+  name         String  @db.VarChar(150)
+  nameKannada  String? @db.VarChar(150)
+
+  fatherName        String? @db.VarChar(150)
+  fatherNameKannada String? @db.VarChar(150)
+
+  spouseName        String? @db.VarChar(150)
+  spouseNameKannada String? @db.VarChar(150)
+
+  careOfName        String? @db.VarChar(150)
+  careOfNameKannada String? @db.VarChar(150)
 
   gender Gender?
   dob    DateTime?
@@ -29,12 +36,18 @@ model Member {
   alternateMobile String? @db.VarChar(20)
   email           String? @db.VarChar(150)
 
-  // Current address
+  // Current address - English
   addressLine1 String? @db.VarChar(255)
   addressLine2 String? @db.VarChar(255)
   city         String? @db.VarChar(100)
   district     String? @db.VarChar(100)
   postalCode   String? @db.VarChar(20)
+
+  // Current address - Kannada
+  addressLine1Kannada String? @db.VarChar(255)
+  addressLine2Kannada String? @db.VarChar(255)
+  cityKannada         String? @db.VarChar(100)
+  districtKannada     String? @db.VarChar(100)
 
   // Identity / KYC
   aadhaarNumber String? @db.VarChar(20)
@@ -45,12 +58,12 @@ model Member {
   joinDate       DateTime?
   membershipDate DateTime?
 
-  // Nominee
-  nomineeName        String?   @db.VarChar(150)
-  nomineeRelation    String?   @db.VarChar(50)
-  nomineeMobile      String?   @db.VarChar(20)
-  nomineeEmail       String?   @db.VarChar(150)
-  nomineeAddress     String?   @db.VarChar(500)
+  // Nominee - English
+  nomineeName        String? @db.VarChar(150)
+  nomineeRelation    String? @db.VarChar(50)
+  nomineeMobile      String? @db.VarChar(20)
+  nomineeEmail       String? @db.VarChar(150)
+  nomineeAddress     String? @db.VarChar(500)
   nomineeDateOfBirth DateTime?
 
   // Login
@@ -65,8 +78,12 @@ model Member {
   updatedAt DateTime @updatedAt
 
   @@index([name])
+  @@index([nameKannada])
   @@index([mobile])
   @@index([city])
+  @@index([cityKannada])
+  @@index([district])
+  @@index([districtKannada])
   @@index([memberType])
   @@index([status])
   @@index([panNumber])

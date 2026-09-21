@@ -7,7 +7,7 @@ import type { RootState } from "./store";
 import Header from "./components/layout/Header";
 import Footer from "./components/layout/Footer";
 import AppRoutes from "./routes/AppRoutes";
-
+import { Toaster } from "@/components/ui/sonner";
 function App() {
   const serverStatus = useSelector((state: RootState) => state.serverStatus);
 
@@ -42,6 +42,7 @@ function App() {
           <AppRoutes />
         )}
       </main>
+      <Toaster position='top-right' richColors />
 
       <Footer />
     </div>
