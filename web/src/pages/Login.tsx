@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowRight, Building2, ShieldCheck, Users } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -12,12 +12,50 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+
+import { toast } from "sonner";
+import { loginUser } from "../api/auth";
+
 function Login() {
+  const navigate = useNavigate();
   const [memberCode, setMemberCode] = useState("");
   const [password, setPassword] = useState("");
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+
+  useEffect(() => {
+    if (localStorage.getItem("accessToken")) {
+      navigate("/admin", { replace: true });
+    }
+  }, [navigate]);
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    console.log({ memberCode, password });
+
+    if (!memberCode || !password) {
+      toast.error("Please enter your member code and password.");
+      return;
+    }
+
+    try {
+      const response = await loginUser({
+        memberCode,
+        password,
+      });
+
+      const token = response.data?.token;
+
+      if (token) {
+        localStorage.setItem("accessToken", token);
+      }
+
+      toast.success(response.message || "Login successful.");
+      navigate("/admin", { replace: true });
+    } catch (error) {
+      const apiError = error as {
+        message?: string;
+      };
+
+      toast.error(apiError.message || "Invalid member code or password.");
+    }
   };
   return (
     <main className='min-h-screen bg-muted/40'>

@@ -13,8 +13,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { registerMember } from "../api/auth";
+
 import { toast } from "sonner";
+import { registerUser } from "../api/auth";
 
 function Register() {
   const [memberCode, setMemberCode] = useState("");
@@ -28,7 +29,7 @@ function Register() {
     event.preventDefault();
 
     try {
-      const response = await registerMember({
+      const response = await registerUser({
         memberCode,
         name,
         mobile,
