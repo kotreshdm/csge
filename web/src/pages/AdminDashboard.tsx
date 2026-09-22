@@ -1,10 +1,14 @@
 import { Button } from "@/components/ui/button";
+import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
+import { logout } from "../store/slices/authSlice";
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
 
   const handleLogout = () => {
+    dispatch(logout());
     localStorage.removeItem("accessToken");
     navigate("/admin/login", { replace: true });
   };

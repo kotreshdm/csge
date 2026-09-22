@@ -42,7 +42,7 @@ function App() {
           <AppRoutes />
         )}
       </main>
-      <Toaster position='top-right' richColors />
+      <Toaster position='bottom-right' richColors duration={5000} />
 
       <Footer />
     </div>

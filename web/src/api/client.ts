@@ -1,7 +1,10 @@
 import axios, { type AxiosError, type AxiosRequestConfig } from "axios";
 
 import { store } from "../store";
-import { setServerOnline, setServerOffline } from "../store/serverStatusSlice";
+import {
+  setServerOnline,
+  setServerOffline,
+} from "../store/slices/serverStatusSlice";
 
 const API_URL = import.meta.env.VITE_API_URL;
 

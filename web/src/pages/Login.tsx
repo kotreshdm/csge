@@ -15,9 +15,12 @@ import { Separator } from "@/components/ui/separator";
 
 import { toast } from "sonner";
 import { loginUser } from "../api/auth";
+import { useDispatch } from "react-redux";
+import { loginSuccess, type User } from "../store/slices/authSlice";
 
 function Login() {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const [memberCode, setMemberCode] = useState("");
   const [password, setPassword] = useState("");
 
@@ -42,9 +45,25 @@ function Login() {
       });
 
       const token = response.data?.token;
+      const member = response.data?.member;
 
-      if (token) {
+      if (token && member) {
+        const user = {
+          id: member.memberId,
+          memberId: member.memberId,
+          memberCode: member.memberCode,
+          name: member.name,
+          role: member.memberType,
+          memberType: member.memberType,
+        } satisfies User;
+
         localStorage.setItem("accessToken", token);
+        dispatch(
+          loginSuccess({
+            user,
+            accessToken: token,
+          }),
+        );
       }
 
       toast.success(response.message || "Login successful.");
