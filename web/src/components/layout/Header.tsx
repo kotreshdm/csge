@@ -1,12 +1,15 @@
 import { Building2, LogOut } from "lucide-react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
+import { ROUTES } from "../../const/routs";
 import type { RootState } from "src/store";
 import { logout } from "../../store/slices/authSlice";
+
 const navItems = [
-  { label: "Login", to: "/admin/login" },
-  { label: "Register", to: "/admin/register" },
+  { label: "Login", to: ROUTES.ADMIN.LOGIN },
+  { label: "Register", to: ROUTES.ADMIN.REGISTER },
 ];
+
 function Header() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -14,14 +17,16 @@ function Header() {
     (state: RootState) => state.auth.isAuthenticated,
   );
   const user = useSelector((state: RootState) => state.auth.user);
+
   const handleSignOut = () => {
     dispatch(logout());
-    navigate("/admin/login");
+    navigate(ROUTES.ADMIN.LOGIN, { replace: true });
   };
+
   return (
     <header className='border-b bg-background'>
       <div className='mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8'>
-        <Link to='/admin/login' className='flex items-center gap-3'>
+        <Link to={ROUTES.ADMIN.LOGIN} className='flex items-center gap-3'>
           <div className='flex h-9 w-9 items-center justify-center rounded-lg bg-primary'>
             <Building2 className='h-5 w-5 text-primary-foreground' />{" "}
           </div>{" "}

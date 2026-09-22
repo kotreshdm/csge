@@ -1,16 +1,20 @@
 import { Button } from "@/components/ui/button";
 import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { ROUTES } from "../const/routs";
 import { logout } from "../store/slices/authSlice";
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleLogout = () => {
+    setIsLoggingOut(true);
     dispatch(logout());
     localStorage.removeItem("accessToken");
-    navigate("/admin/login", { replace: true });
+    navigate(ROUTES.ADMIN.LOGIN, { replace: true });
   };
 
   return (
@@ -27,8 +31,13 @@ export default function AdminDashboard() {
         </p>
 
         <div className='mt-6 flex justify-end'>
-          <Button onClick={handleLogout} variant='outline'>
-            Sign out
+          <Button
+            onClick={handleLogout}
+            variant='outline'
+            disabled={isLoggingOut}
+            className='disabled:cursor-not-allowed disabled:opacity-70'
+          >
+            {isLoggingOut ? "Signing out..." : "Sign out"}
           </Button>
         </div>
       </div>

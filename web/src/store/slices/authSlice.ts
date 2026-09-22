@@ -18,9 +18,12 @@ interface AuthState {
 }
 
 const initialState: AuthState = {
-  isAuthenticated: false,
+  isAuthenticated:
+    typeof window !== "undefined" &&
+    Boolean(localStorage.getItem("accessToken")),
   user: null,
-  accessToken: null,
+  accessToken:
+    typeof window !== "undefined" ? localStorage.getItem("accessToken") : null,
 };
 
 const persistAccessToken = (token: string | null) => {

@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 
+import { ROUTES } from "../const/routs";
 import AdminDashboard from "../pages/AdminDashboard";
 import Login from "../pages/Login";
 import Register from "../pages/Register";
@@ -10,18 +11,26 @@ function hasAccessToken() {
 }
 
 function ProtectedRoute({ children }: { children: JSX.Element }) {
-  return hasAccessToken() ? children : <Navigate to='/admin/login' replace />;
+  return hasAccessToken() ? (
+    children
+  ) : (
+    <Navigate to={ROUTES.ADMIN.LOGIN} replace />
+  );
 }
 
 function RedirectIfAuthenticated({ children }: { children: JSX.Element }) {
-  return hasAccessToken() ? <Navigate to='/admin' replace /> : children;
+  return hasAccessToken() ? (
+    <Navigate to={ROUTES.ADMIN.ROOT} replace />
+  ) : (
+    children
+  );
 }
 
 export default function AppRoutes() {
   return (
     <Routes>
       <Route
-        path='/admin'
+        path={ROUTES.ADMIN.ROOT}
         element={
           <ProtectedRoute>
             <AdminDashboard />
@@ -30,7 +39,7 @@ export default function AppRoutes() {
       />
 
       <Route
-        path='/admin/login'
+        path={ROUTES.ADMIN.LOGIN}
         element={
           <RedirectIfAuthenticated>
             <Login />
@@ -39,7 +48,7 @@ export default function AppRoutes() {
       />
 
       <Route
-        path='/admin/register'
+        path={ROUTES.ADMIN.REGISTER}
         element={
           <RedirectIfAuthenticated>
             <Register />
@@ -47,8 +56,11 @@ export default function AppRoutes() {
         }
       />
 
-      <Route path='/' element={<Navigate to='/admin/login' replace />} />
-      <Route path='*' element={<Navigate to='/admin/login' replace />} />
+      <Route
+        path={ROUTES.ROOT}
+        element={<Navigate to={ROUTES.ADMIN.LOGIN} replace />}
+      />
+      <Route path='*' element={<Navigate to={ROUTES.ADMIN.LOGIN} replace />} />
     </Routes>
   );
 }

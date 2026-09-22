@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { ArrowRight, Building2, ShieldCheck, Users } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
+import { ROUTES } from "../const/routs";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -15,20 +16,27 @@ import { Separator } from "@/components/ui/separator";
 
 import { toast } from "sonner";
 import { loginUser } from "../api/auth";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { loginSuccess, type User } from "../store/slices/authSlice";
+import type { RootState } from "../store";
 
 function Login() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const isAuthenticated = useSelector(
+    (state: RootState) => state.auth.isAuthenticated,
+  );
   const [memberCode, setMemberCode] = useState("");
   const [password, setPassword] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
   useEffect(() => {
-    if (localStorage.getItem("accessToken")) {
-      navigate("/admin", { replace: true });
+    if (isAuthenticated && !isRedirecting) {
+      setIsRedirecting(true);
+      navigate(ROUTES.ADMIN.ROOT, { replace: true });
     }
-  }, [navigate]);
+  }, [isAuthenticated, isRedirecting, navigate]);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -37,6 +45,8 @@ function Login() {
       toast.error("Please enter your member code and password.");
       return;
     }
+
+    setIsSubmitting(true);
 
     try {
       const response = await loginUser({
@@ -57,7 +67,6 @@ function Login() {
           memberType: member.memberType,
         } satisfies User;
 
-        localStorage.setItem("accessToken", token);
         dispatch(
           loginSuccess({
             user,
@@ -66,16 +75,30 @@ function Login() {
         );
       }
 
+      setIsRedirecting(true);
       toast.success(response.message || "Login successful.");
-      navigate("/admin", { replace: true });
+      navigate(ROUTES.ADMIN.ROOT, { replace: true });
     } catch (error) {
       const apiError = error as {
         message?: string;
       };
 
       toast.error(apiError.message || "Invalid member code or password.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
+
+  if (isRedirecting) {
+    return (
+      <main className='flex min-h-screen items-center justify-center bg-muted/40'>
+        <div className='rounded-xl border border-border bg-background px-6 py-4 text-sm font-medium text-muted-foreground shadow-sm'>
+          Signing you in...
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className='min-h-screen bg-muted/40'>
       <div className='grid min-h-screen lg:grid-cols-2'>
@@ -181,10 +204,11 @@ function Login() {
                   </div>
                   <Button
                     type='submit'
-                    className='h-14 w-full rounded-lg text-base font-semibold shadow-md transition-all hover:shadow-lg'
+                    disabled={isSubmitting}
+                    className='h-14 w-full rounded-lg text-base font-semibold shadow-md transition-all hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-70'
                   >
-                    Sign in
-                    <ArrowRight className='ml-2 h-5 w-5' />
+                    {isSubmitting ? "Signing in..." : "Sign in"}
+                    {!isSubmitting && <ArrowRight className='ml-2 h-5 w-5' />}
                   </Button>
                 </form>
                 <div className='my-6 flex items-center gap-3'>
@@ -196,7 +220,7 @@ function Login() {
                 </div>
 
                 <Button variant='outline' className='w-full'>
-                  <Link to='/admin/register'>Create an account</Link>
+                  <Link to={ROUTES.ADMIN.REGISTER}>Create an account</Link>
                 </Button>
                 <p className='mt-6 text-center text-xs leading-5 text-muted-foreground'>
                   By continuing, you agree to use this system only for

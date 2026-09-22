@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ArrowRight, Building2, Check, ShieldCheck, Users } from "lucide-react";
 import { Link } from "react-router-dom";
+import { ROUTES } from "../const/routs";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -305,7 +306,7 @@ function Register() {
                   </div>
 
                   <Button variant='outline' className='mt-3 h-10 w-full'>
-                    <Link to='/admin/login'>Sign in to your account</Link>
+                    <Link to={ROUTES.ADMIN.LOGIN}>Sign in to your account</Link>
                   </Button>
                 </div>
               </CardContent>

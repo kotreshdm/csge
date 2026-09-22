@@ -1,52 +1,105 @@
-import { useEffect } from "react";
+import { Navigate, Route, Routes } from "react-router-dom";
 import { useSelector } from "react-redux";
 
-import { getHealth } from "./api/health";
-import type { RootState } from "./store";
-
+import { Toaster } from "@/components/ui/sonner";
 import Header from "./components/layout/Header";
 import Footer from "./components/layout/Footer";
-import AppRoutes from "./routes/AppRoutes";
-import { Toaster } from "@/components/ui/sonner";
-function App() {
-  const serverStatus = useSelector((state: RootState) => state.serverStatus);
+import { ROUTES } from "./const/routs";
+import AdminDashboard from "./pages/AdminDashboard";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import Members from "./pages/members/Members";
+import AddMember from "./pages/members/AddMember";
+import EditMember from "./pages/members/EditMember";
+import type { RootState } from "./store";
 
-  useEffect(() => {
-    const checkServer = () => {
-      getHealth().catch(() => {});
-    };
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const isAuthenticated = useSelector(
+    (state: RootState) => state.auth.isAuthenticated,
+  );
 
-    checkServer();
+  return isAuthenticated ? children : <Navigate to={ROUTES.ADMIN.LOGIN} replace />;
+}
 
-    const interval = window.setInterval(checkServer, 5 * 60 * 1000);
+function RedirectIfAuthenticated({ children }: { children: React.ReactNode }) {
+  const isAuthenticated = useSelector(
+    (state: RootState) => state.auth.isAuthenticated,
+  );
 
-    return () => window.clearInterval(interval);
-  }, []);
+  return isAuthenticated ? <Navigate to={ROUTES.ADMIN.ROOT} replace /> : children;
+}
 
+export default function App() {
   return (
     <div className='flex min-h-screen flex-col bg-muted/30'>
       <Header />
 
       <main className='flex-1'>
-        {serverStatus.status === "OFFLINE" ? (
-          <div className='flex min-h-[calc(100vh-8rem)] items-center justify-center px-4'>
-            <div className='text-center'>
-              <h2 className='text-xl font-semibold'>Server Unavailable</h2>
+        <Routes>
+          <Route
+            path={ROUTES.ADMIN.ROOT}
+            element={
+              <ProtectedRoute>
+                <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
 
-              <p className='mt-2 text-sm text-muted-foreground'>
-                The server is currently unavailable. Please try again later.
-              </p>
-            </div>
-          </div>
-        ) : (
-          <AppRoutes />
-        )}
+          <Route
+            path={ROUTES.ADMIN.LOGIN}
+            element={
+              <RedirectIfAuthenticated>
+                <Login />
+              </RedirectIfAuthenticated>
+            }
+          />
+
+          <Route
+            path={ROUTES.ADMIN.REGISTER}
+            element={
+              <RedirectIfAuthenticated>
+                <Register />
+              </RedirectIfAuthenticated>
+            }
+          />
+
+          <Route
+            path={ROUTES.ADMIN.MEMBERS}
+            element={
+              <ProtectedRoute>
+                <Members />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path={ROUTES.ADMIN.MEMBERS_ADD}
+            element={
+              <ProtectedRoute>
+                <AddMember />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path={ROUTES.ADMIN.MEMBERS_EDIT(":id")}
+            element={
+              <ProtectedRoute>
+                <EditMember />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path={ROUTES.ROOT}
+            element={<Navigate to={ROUTES.ADMIN.LOGIN} replace />}
+          />
+          <Route path='*' element={<Navigate to={ROUTES.ADMIN.LOGIN} replace />} />
+        </Routes>
       </main>
-      <Toaster position='bottom-right' richColors duration={5000} />
 
+      <Toaster position='bottom-right' richColors duration={5000} />
       <Footer />
     </div>
   );
 }
-
-export default App;
