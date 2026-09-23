@@ -57,23 +57,26 @@ function Login() {
       const token = response.data?.token;
       const member = response.data?.member;
 
-      if (token && member) {
-        const user = {
-          id: member.memberId,
-          memberId: member.memberId,
-          memberCode: member.memberCode,
-          name: member.name,
-          role: member.memberType,
-          memberType: member.memberType,
-        } satisfies User;
-
-        dispatch(
-          loginSuccess({
-            user,
-            accessToken: token,
-          }),
-        );
+      if (!response.success || !token || !member) {
+        toast.error(response.message || "Invalid member code or password.");
+        return;
       }
+
+      const user = {
+        id: member.memberId,
+        memberId: member.memberId,
+        memberCode: member.memberCode,
+        name: member.name,
+        role: member.memberType,
+        memberType: member.memberType,
+      } satisfies User;
+
+      dispatch(
+        loginSuccess({
+          user,
+          accessToken: token,
+        }),
+      );
 
       setIsRedirecting(true);
       toast.success(response.message || "Login successful.");
@@ -104,9 +107,9 @@ function Login() {
       <div className='grid min-h-screen lg:grid-cols-2'>
         <section className='relative hidden overflow-hidden bg-primary lg:flex'>
           <div className='absolute inset-0'>
-            <div className='absolute -left-32 -top-32 h-96 w-96 rounded-full bg-white/10 blur-3xl' />{" "}
-            <div className='absolute -bottom-40 -right-20 h-[30rem] w-[30rem] rounded-full bg-white/10 blur-3xl' />{" "}
-            <div className='absolute left-1/2 top-1/2 h-72 w-72 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/5 blur-3xl' />{" "}
+            <div className='absolute -left-32 -top-32 h-96 w-96 rounded-full bg-white/10 blur-3xl' />
+            <div className='absolute -bottom-40 -right-20 h-[30rem] w-[30rem] rounded-full bg-white/10 blur-3xl' />
+            <div className='absolute left-1/2 top-1/2 h-72 w-72 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/5 blur-3xl' />
           </div>
           <div className='relative z-10 flex w-full flex-col justify-between p-12 xl:p-16'>
             <div className='max-w-xl'>
@@ -114,15 +117,15 @@ function Login() {
                 Welcome back
               </p>
               <h1 className='text-4xl font-semibold tracking-tight text-white xl:text-5xl'>
-                Manage your cooperative operations with confidence.{" "}
+                Manage your cooperative operations with confidence.
               </h1>
               <p className='mt-6 max-w-lg text-base leading-7 text-white/70'>
                 A centralized platform to manage members, layouts, developers,
-                transactions and day-to-day operations of CSGE.{" "}
+                transactions and day-to-day operations of CSGE.
               </p>
               <div className='mt-10 grid gap-4 sm:grid-cols-3'>
                 <div className='rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm'>
-                  <Users className='mb-3 h-5 w-5 text-white' />{" "}
+                  <Users className='mb-3 h-5 w-5 text-white' />
                   <p className='text-sm font-medium text-white'>Members</p>
                   <p className='mt-1 text-xs leading-5 text-white/50'>
                     Centralized member management
@@ -219,9 +222,12 @@ function Login() {
                   <Separator className='flex-1' />
                 </div>
 
-                <Button variant='outline' className='w-full'>
-                  <Link to={ROUTES.ADMIN.REGISTER}>Create an account</Link>
-                </Button>
+                <Link
+                  to={ROUTES.ADMIN.REGISTER}
+                  className='inline-flex h-10 w-full items-center justify-center rounded-lg border border-input bg-background text-sm font-medium text-foreground transition-colors hover:bg-muted'
+                >
+                  Create an account
+                </Link>
                 <p className='mt-6 text-center text-xs leading-5 text-muted-foreground'>
                   By continuing, you agree to use this system only for
                   authorized CSGE activities.

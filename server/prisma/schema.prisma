@@ -8,74 +8,48 @@ datasource db {
 }
 
 model Member {
-  memberId BigInt @id @default(autoincrement())
-
-  // Membership
-  memberCode String       @unique @db.VarChar(50)
-  memberType MemberType   @default(MEMBER)
-  status     MemberStatus @default(ACTIVE)
-
-  // Personal details
-  name         String  @db.VarChar(150)
-  nameKannada  String? @db.VarChar(150)
-
-  fatherName        String? @db.VarChar(150)
-  fatherNameKannada String? @db.VarChar(150)
-
-  spouseName        String? @db.VarChar(150)
-  spouseNameKannada String? @db.VarChar(150)
-
-  careOfName        String? @db.VarChar(150)
-  careOfNameKannada String? @db.VarChar(150)
-
-  gender Gender?
-  dob    DateTime?
-
-  // Contact
-  mobile          String? @db.VarChar(20)
-  alternateMobile String? @db.VarChar(20)
-  email           String? @db.VarChar(150)
-
-  // Current address - English
-  addressLine1 String? @db.VarChar(255)
-  addressLine2 String? @db.VarChar(255)
-  city         String? @db.VarChar(100)
-  district     String? @db.VarChar(100)
-  postalCode   String? @db.VarChar(20)
-
-  // Current address - Kannada
-  addressLine1Kannada String? @db.VarChar(255)
-  addressLine2Kannada String? @db.VarChar(255)
-  cityKannada         String? @db.VarChar(100)
-  districtKannada     String? @db.VarChar(100)
-
-  // Identity / KYC
-  aadhaarNumber String? @db.VarChar(20)
-  panNumber     String? @db.VarChar(20)
-  otherId       String? @db.VarChar(20)
-
-  // Membership dates
-  joinDate       DateTime?
-  membershipDate DateTime?
-
-  // Nominee - English
-  nomineeName        String? @db.VarChar(150)
-  nomineeRelation    String? @db.VarChar(50)
-  nomineeMobile      String? @db.VarChar(20)
-  nomineeEmail       String? @db.VarChar(150)
-  nomineeAddress     String? @db.VarChar(500)
-  nomineeDateOfBirth DateTime?
-
-  // Login
-  passwordHash String? @db.VarChar(255)
-
-  // Additional information
-  occupation String? @db.VarChar(150)
-  remarks    String? @db.Text
-
-  // Audit
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  memberId            BigInt       @id @default(autoincrement())
+  memberCode          String       @unique @db.VarChar(50)
+  memberType          MemberType   @default(MEMBER)
+  status              MemberStatus @default(ACTIVE)
+  name                String       @db.VarChar(150)
+  nameKannada         String?      @db.VarChar(150)
+  fatherName          String?      @db.VarChar(150)
+  fatherNameKannada   String?      @db.VarChar(150)
+  spouseName          String?      @db.VarChar(150)
+  spouseNameKannada   String?      @db.VarChar(150)
+  careOfName          String?      @db.VarChar(150)
+  careOfNameKannada   String?      @db.VarChar(150)
+  gender              Gender?
+  dob                 DateTime?    @db.Date
+  mobile              String?      @db.VarChar(20)
+  alternateMobile     String?      @db.VarChar(20)
+  email               String?      @db.VarChar(150)
+  addressLine1        String?      @db.VarChar(255)
+  addressLine2        String?      @db.VarChar(255)
+  city                String?      @db.VarChar(100)
+  district            String?      @db.VarChar(100)
+  postalCode          String?      @db.VarChar(20)
+  addressLine1Kannada String?      @db.VarChar(255)
+  addressLine2Kannada String?      @db.VarChar(255)
+  cityKannada         String?      @db.VarChar(100)
+  districtKannada     String?      @db.VarChar(100)
+  aadhaarNumber       String?      @db.VarChar(20)
+  panNumber           String?      @db.VarChar(20)
+  otherId             String?      @db.VarChar(20)
+  joinDate            DateTime?    @db.Date
+  membershipDate      DateTime?    @db.Date
+  nomineeName         String?      @db.VarChar(150)
+  nomineeRelation     String?      @db.VarChar(50)
+  nomineeMobile       String?      @db.VarChar(20)
+  nomineeEmail        String?      @db.VarChar(150)
+  nomineeAddress      String?      @db.VarChar(500)
+  nomineeDateOfBirth  DateTime?    @db.Date
+  passwordHash        String?      @db.VarChar(255)
+  occupation          String?      @db.VarChar(150)
+  remarks             String?
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
 
   @@index([name])
   @@index([nameKannada])
@@ -88,7 +62,6 @@ model Member {
   @@index([status])
   @@index([panNumber])
   @@index([aadhaarNumber])
-
   @@map("members")
 }
 
