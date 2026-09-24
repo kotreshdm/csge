@@ -4,10 +4,49 @@ import { AppError } from "../utils/AppError.js";
 import { sendSuccess } from "../utils/response.js";
 import {
   createMember,
+  getMembers,
   uploadMembersFromFile,
 } from "../services/memberService.js";
 
 export const memberController = {
+  getMembers: async (request: FastifyRequest, reply: FastifyReply) => {
+    const query = (request.query ?? {}) as Record<string, unknown>;
+
+    const page = Number(query.page ?? 1);
+    const limit = Number(query.limit ?? 20);
+
+    const search = typeof query.search === "string" ? query.search : "";
+
+    const memberType =
+      typeof query.memberType === "string" ? query.memberType : "";
+
+    const status = typeof query.status === "string" ? query.status : "";
+
+    const gender = typeof query.gender === "string" ? query.gender : "";
+
+    // NEW
+    const sortBy =
+      typeof query.sortBy === "string" ? query.sortBy : "memberCode";
+
+    // NEW
+    const sortOrder = query.sortOrder === "desc" ? "desc" : "asc";
+
+    const result = await getMembers({
+      page,
+      limit,
+      search,
+      memberType,
+      status,
+      gender,
+
+      // NEW
+      sortBy,
+      sortOrder,
+    });
+
+    return sendSuccess(reply, 200, "Members fetched successfully.", result);
+  },
+
   createMember: async (request: FastifyRequest, reply: FastifyReply) => {
     const payload = (request.body ?? {}) as Record<string, unknown>;
 

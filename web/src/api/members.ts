@@ -1,5 +1,39 @@
 import { api } from './client';
 
+export interface MemberQueryParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  memberType?: string;
+  status?: string;
+  gender?: string;
+  city?: string;
+  district?: string;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+}
+
+export interface PaginatedMembersResponse {
+  items: Array<{
+    memberId: string;
+    memberCode: string;
+    name: string;
+    nameKannada?: string | null;
+    mobile?: string | null;
+    memberType?: string | null;
+    status?: string | null;
+    gender?: string | null;
+    city?: string | null;
+    district?: string | null;
+    joinDate?: string | null;
+    createdAt?: string;
+  }>;
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
 export interface CreateMemberPayload {
   memberCode?: string;
   recieptNo?: string;
@@ -65,6 +99,29 @@ export interface UploadMembersResponse {
       error: string;
     }>;
   };
+}
+
+export function getMembers(params: MemberQueryParams = {}) {
+  return api<{
+    success: boolean;
+    message: string;
+    data: PaginatedMembersResponse;
+  }>({
+    method: 'GET',
+    url: '/members',
+    params: {
+      page: params.page ?? 1,
+      limit: params.limit ?? 20,
+      search: params.search || undefined,
+      memberType: params.memberType || undefined,
+      status: params.status || undefined,
+      gender: params.gender || undefined,
+      city: params.city || undefined,
+      district: params.district || undefined,
+      sortBy: params.sortBy || undefined,
+      sortOrder: params.sortOrder || undefined,
+    },
+  });
 }
 
 export function createMember(data: CreateMemberPayload) {

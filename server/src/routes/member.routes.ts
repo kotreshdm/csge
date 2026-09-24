@@ -4,17 +4,9 @@ import { requireAuth } from "../middleware/authGuard.js";
 import { memberController } from "../controllers/memberController.js";
 
 export default async function memberRoutes(app: FastifyInstance) {
-  app.post(    "/",
-    {
-      preValidation: requireAuth,
-    },
-    memberController.createMember,
-  );
+  app.addHook("preValidation", requireAuth);
 
-  app.post(    "/upload",
-    {
-      preValidation: [requireAuth],
-    },
-    memberController.uploadMembers,
-  );
+  app.get("/", memberController.getMembers);
+  app.post("/", memberController.createMember);
+  app.post("/upload", memberController.uploadMembers);
 }

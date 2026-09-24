@@ -235,6 +235,125 @@ function validateMaxLengths(input: Record<string, unknown>) {
   }
 }
 
+export async function getMembers(params?: {
+  page?: number;
+  limit?: number;
+  search?: string;
+  filters?: Record<string, unknown>;
+  memberType?: string;
+  status?: string;
+  gender?: string;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
+}) {
+  const page = Number(params?.page ?? 1);
+  const limit = Number(params?.limit ?? 20);
+  const searchValue =
+    typeof params?.search === "string" ? params.search.trim() : "";
+  const baseFilters = params?.filters ?? {};
+  const memberType = typeof params?.memberType === "string" ? params.memberType : "";
+  const status = typeof params?.status === "string" ? params.status : "";
+  const gender = typeof params?.gender === "string" ? params.gender : "";
+  const sortBy =
+    ["memberCode", "recieptNo", "joinDate", "name", "status", "mobile"].includes(
+      params?.sortBy ?? "",
+    )
+      ? (params?.sortBy as string)
+      : "memberCode";
+  const sortOrder = params?.sortOrder === "desc" ? "desc" : "asc";
+
+  const safePage = Number.isFinite(page) && page > 0 ? Math.floor(page) : 1;
+  const validPageSizes = [20, 50, 100];
+  const safeLimit =
+    Number.isFinite(limit) && limit > 0
+      ? validPageSizes.includes(Math.floor(limit))
+        ? Math.floor(limit)
+        : 20
+      : 20;
+  const where: Prisma.MemberWhereInput = {
+    ...(memberType && {
+      memberType: memberType as Prisma.MemberType,
+    }),
+    ...(status && {
+      status: status as Prisma.MemberStatus,
+    }),
+    ...(gender && {
+      gender: gender as Prisma.Gender,
+    }),
+    ...(searchValue && {
+      OR: [
+        { memberCode: { contains: searchValue, mode: "insensitive" } },
+        { recieptNo: { contains: searchValue, mode: "insensitive" } },
+        { name: { contains: searchValue, mode: "insensitive" } },
+        { nameKannada: { contains: searchValue, mode: "insensitive" } },
+        { mobile: { contains: searchValue, mode: "insensitive" } },
+        { careOfName: { contains: searchValue, mode: "insensitive" } },
+        { careOfNameKannada: { contains: searchValue, mode: "insensitive" } },
+        { addressLine1: { contains: searchValue, mode: "insensitive" } },
+        { addressLine2: { contains: searchValue, mode: "insensitive" } },
+        { addressLine1Kannada: { contains: searchValue, mode: "insensitive" } },
+        { addressLine2Kannada: { contains: searchValue, mode: "insensitive" } },
+        { city: { contains: searchValue, mode: "insensitive" } },
+        { cityKannada: { contains: searchValue, mode: "insensitive" } },
+        { district: { contains: searchValue, mode: "insensitive" } },
+        { districtKannada: { contains: searchValue, mode: "insensitive" } },
+        { postalCode: { contains: searchValue, mode: "insensitive" } },
+      ],
+    }),
+  };
+
+  const skip = (safePage - 1) * safeLimit;
+
+  const orderBy: Prisma.MemberOrderByWithRelationInput[] = [
+    { [sortBy]: sortOrder },
+    { memberId: "asc" },
+  ] as Prisma.MemberOrderByWithRelationInput[];
+
+  const [items, total] = await Promise.all([
+    prisma.member.findMany({
+      where,
+      skip,
+      take: safeLimit,
+      select: {
+        memberId: true,
+        memberCode: true,
+        recieptNo: true,
+        name: true,
+        nameKannada: true,
+        mobile: true,
+        memberType: true,
+        status: true,
+        gender: true,
+        addressLine1: true,
+        addressLine2: true,
+        city: true,
+        district: true,
+        addressLine1Kannada: true,
+        addressLine2Kannada: true,
+        cityKannada: true,
+        districtKannada: true,
+        postalCode: true,
+        joinDate: true,
+      },
+      orderBy,
+    }),
+    prisma.member.count({
+      where,
+    }),
+  ]);
+
+  return {
+    items: items.map((member) => ({
+      ...member,
+      memberId: member.memberId.toString(),
+    })),
+    total,
+    page: safePage,
+    limit: safeLimit,
+    totalPages: Math.ceil(total / safeLimit) || 1,
+  };
+}
+
 export async function createMember(input: Record<string, unknown>) {
   const memberCode = expectRequiredString(input.memberCode, "Member code");
   const recieptNo = expectRequiredString(input.recieptNo, "Receipt number");
