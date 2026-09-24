@@ -10,35 +10,36 @@ datasource db {
 model Member {
   memberId            BigInt       @id @default(autoincrement())
   memberCode          String       @unique @db.VarChar(50)
-  memberType          MemberType   @default(MEMBER)
-  status              MemberStatus @default(ACTIVE)
+  recieptNo           String?      @db.VarChar(20)
+  joinDate            DateTime?    @db.Date
   name                String       @db.VarChar(150)
   nameKannada         String?      @db.VarChar(150)
-  fatherName          String?      @db.VarChar(150)
-  fatherNameKannada   String?      @db.VarChar(150)
-  spouseName          String?      @db.VarChar(150)
-  spouseNameKannada   String?      @db.VarChar(150)
   careOfName          String?      @db.VarChar(150)
   careOfNameKannada   String?      @db.VarChar(150)
-  gender              Gender?
-  dob                 DateTime?    @db.Date
+  age                 String?      @db.VarChar(10)
   mobile              String?      @db.VarChar(20)
-  alternateMobile     String?      @db.VarChar(20)
-  email               String?      @db.VarChar(150)
+  memberType          MemberType   @default(MEMBER)
+  status              MemberStatus @default(ACTIVE)
+  gender              Gender?
   addressLine1        String?      @db.VarChar(255)
   addressLine2        String?      @db.VarChar(255)
   city                String?      @db.VarChar(100)
   district            String?      @db.VarChar(100)
-  postalCode          String?      @db.VarChar(20)
   addressLine1Kannada String?      @db.VarChar(255)
   addressLine2Kannada String?      @db.VarChar(255)
   cityKannada         String?      @db.VarChar(100)
   districtKannada     String?      @db.VarChar(100)
+  postalCode          String?      @db.VarChar(20)
+  fatherName          String?      @db.VarChar(150)
+  fatherNameKannada   String?      @db.VarChar(150)
+  spouseName          String?      @db.VarChar(150)
+  spouseNameKannada   String?      @db.VarChar(150)
+  dob                 DateTime?    @db.Date
+  alternateMobile     String?      @db.VarChar(20)
+  email               String?      @db.VarChar(150)
   aadhaarNumber       String?      @db.VarChar(20)
   panNumber           String?      @db.VarChar(20)
   otherId             String?      @db.VarChar(20)
-  joinDate            DateTime?    @db.Date
-  membershipDate      DateTime?    @db.Date
   nomineeName         String?      @db.VarChar(150)
   nomineeRelation     String?      @db.VarChar(50)
   nomineeMobile       String?      @db.VarChar(20)
@@ -74,6 +75,7 @@ enum MemberType {
 enum MemberStatus {
   ACTIVE
   INACTIVE
+  INCORRECT
   RESIGNED
   DECEASED
 }

@@ -2,6 +2,7 @@ export type MemberTypeValue = "SUPERUSER" | "MEMBER" | "ASSOCIATE";
 export type MemberStatusValue =
   | "ACTIVE"
   | "INACTIVE"
+  | "INCORRECT"
   | "RESIGNED"
   | "DECEASED";
 export type GenderValue = "MALE" | "FEMALE" | "OTHER";
@@ -15,6 +16,7 @@ export const MEMBER_TYPE_MAP = {
 export const MEMBER_STATUS_MAP = {
   active: "ACTIVE",
   inactive: "INACTIVE",
+  incorrect: "INCORRECT",
   resigned: "RESIGNED",
   deceased: "DECEASED",
 } as const satisfies Record<string, MemberStatusValue>;

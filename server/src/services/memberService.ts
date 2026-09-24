@@ -52,19 +52,17 @@ function normalizeGender(value?: string): GenderValue | null {
 function normalizeMemberRow(record: Record<string, unknown>) {
   return {
     memberCode: getValue(record, "memberCode"),
+    recieptNo: getValue(record, "recieptNo"),
+    joinDate: parseDateValue(getValue(record, "joinDate")),
     name: getValue(record, "name"),
     nameKannada: getValue(record, "nameKannada"),
-    memberType: getValue(record, "memberType"),
-    status: getValue(record, "status"),
-    fatherName: getValue(record, "fatherName"),
-    fatherNameKannada: getValue(record, "fatherNameKannada"),
-    spouseName: getValue(record, "spouseName"),
-    spouseNameKannada: getValue(record, "spouseNameKannada"),
     careOfName: getValue(record, "careOfName"),
     careOfNameKannada: getValue(record, "careOfNameKannada"),
-    gender: getValue(record, "gender"),
-    dob: parseDateValue(getValue(record, "dob")),
+    age: getValue(record, "age"),
     mobile: getValue(record, "mobile"),
+    memberType: getValue(record, "memberType"),
+    status: getValue(record, "status"),
+    gender: getValue(record, "gender"),
     addressLine1: getValue(record, "addressLine1"),
     addressLine2: getValue(record, "addressLine2"),
     city: getValue(record, "city"),
@@ -74,8 +72,6 @@ function normalizeMemberRow(record: Record<string, unknown>) {
     cityKannada: getValue(record, "cityKannada"),
     districtKannada: getValue(record, "districtKannada"),
     postalCode: getValue(record, "postalCode"),
-    joinDate: parseDateValue(getValue(record, "joinDate")),
-    membershipDate: parseDateValue(getValue(record, "membershipDate")),
   };
 }
 
@@ -126,39 +122,26 @@ export async function uploadMembersFromFile(
       const created = await prisma.member.create({
         data: {
           memberCode: record.memberCode,
-          memberType,
-          status,
+          recieptNo: record.recieptNo || null,
+          joinDate: record.joinDate ?? null,
           name: record.name,
           nameKannada: record.nameKannada || null,
-
-          fatherName: record.fatherName || null,
-          fatherNameKannada: record.fatherNameKannada || null,
-
-          spouseName: record.spouseName || null,
-          spouseNameKannada: record.spouseNameKannada || null,
-
           careOfName: record.careOfName || null,
           careOfNameKannada: record.careOfNameKannada || null,
-
-          gender: gender ?? null,
-          dob: record.dob ?? null,
+          age: record.age || null,
           mobile: record.mobile || null,
-
+          memberType,
+          status,
+          gender: gender ?? null,
           addressLine1: record.addressLine1 || null,
-          addressLine1Kannada: record.addressLine1Kannada || null,
-
           addressLine2: record.addressLine2 || null,
-          addressLine2Kannada: record.addressLine2Kannada || null,
-
           city: record.city || null,
-          cityKannada: record.cityKannada || null,
-
           district: record.district || null,
+          addressLine1Kannada: record.addressLine1Kannada || null,
+          addressLine2Kannada: record.addressLine2Kannada || null,
+          cityKannada: record.cityKannada || null,
           districtKannada: record.districtKannada || null,
-
           postalCode: record.postalCode || null,
-          joinDate: record.joinDate ?? null,
-          membershipDate: record.membershipDate ?? record.joinDate ?? null,
         },
       });
 
