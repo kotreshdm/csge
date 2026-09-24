@@ -2,9 +2,20 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 
 import { AppError } from "../utils/AppError.js";
 import { sendSuccess } from "../utils/response.js";
-import { uploadMembersFromFile } from "../services/memberService.js";
+import {
+  createMember,
+  uploadMembersFromFile,
+} from "../services/memberService.js";
 
 export const memberController = {
+  createMember: async (request: FastifyRequest, reply: FastifyReply) => {
+    const payload = (request.body ?? {}) as Record<string, unknown>;
+
+    const member = await createMember(payload);
+
+    return sendSuccess(reply, 201, "Member created successfully.", member);
+  },
+
   uploadMembers: async (request: FastifyRequest, reply: FastifyReply) => {
     const file = await request.file();
 

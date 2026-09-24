@@ -3,13 +3,11 @@ import { Link } from 'react-router-dom';
 import { ArrowLeft, FileSpreadsheet, Upload, UserPlus } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
-import { uploadMembersFile } from '../../api/members';
+import { createMember, uploadMembersFile } from '../../api/members';
 import { ROUTES } from '../../const/routs';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
+import MemberForm, { memberFormDefaultValues, type MemberFormValues } from '../../components/members/MemberForm';
 
 export default function AddMember() {
   const [activeTab, setActiveTab] = useState<'single' | 'excel'>('single');
@@ -17,68 +15,38 @@ export default function AddMember() {
     type: 'success' | 'error';
     message: string;
   } | null>(null);
+  const [submitMessage, setSubmitMessage] = useState<{
+    type: 'success' | 'error';
+    message: string;
+  } | null>(null);
   const [uploadedExcelRows, setUploadedExcelRows] = useState(0);
   const [selectedExcelFile, setSelectedExcelFile] = useState<File | null>(null);
   const [isSubmittingExcel, setIsSubmittingExcel] = useState(false);
+  const [isSubmittingMember, setIsSubmittingMember] = useState(false);
 
-  const [formData, setFormData] = useState({
-    memberCode: '',
-    memberType: 'MEMBER',
-    status: 'ACTIVE',
+  const handleCreateMember = async (values: MemberFormValues) => {
+    setSubmitMessage(null);
+    setIsSubmittingMember(true);
 
-    name: '',
-    nameKannada: '',
+    try {
+      const response = await createMember(values);
+      setSubmitMessage({
+        type: 'success',
+        message: response.message || 'Member created successfully.',
+      });
+    } catch (error) {
+      const message =
+        error && typeof error === 'object' && 'message' in error
+          ? String((error as { message?: string }).message)
+          : 'Unable to create member.';
 
-    fatherName: '',
-    fatherNameKannada: '',
-
-    spouseName: '',
-    spouseNameKannada: '',
-
-    careOfName: '',
-    careOfNameKannada: '',
-
-    gender: '',
-    dob: '',
-
-    mobile: '',
-    alternateMobile: '',
-    email: '',
-
-    addressLine1: '',
-    addressLine2: '',
-    city: '',
-    district: '',
-    postalCode: '',
-
-    addressLine1Kannada: '',
-    addressLine2Kannada: '',
-    cityKannada: '',
-    districtKannada: '',
-
-    aadhaarNumber: '',
-    panNumber: '',
-    otherId: '',
-
-    joinDate: '',
-    membershipDate: '',
-  });
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-
-    setFormData(previous => ({
-      ...previous,
-      [name]: value,
-    }));
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    console.log('Member data:', formData);
-
-    // Call your API here
+      setSubmitMessage({
+        type: 'error',
+        message,
+      });
+    } finally {
+      setIsSubmittingMember(false);
+    }
   };
 
   const handleExcelUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -132,8 +100,6 @@ export default function AddMember() {
         type: 'success',
         message: `${file.name} uploaded successfully. ${rows.length} record(s) read.`,
       });
-
-      console.log('Parsed Excel rows:', rows);
     } catch (error) {
       console.error('Excel parsing failed:', error);
       setSelectedExcelFile(null);
@@ -182,12 +148,10 @@ export default function AddMember() {
   return (
     <main className='min-h-screen bg-slate-50 p-6'>
       <div className='mx-auto max-w-6xl'>
-        {/* Header */}
         <div className='mb-6 flex items-center justify-between'>
           <div>
             <div className='flex items-center gap-3'>
               <UserPlus className='h-6 w-6 text-primary' />
-
               <h1 className='text-2xl font-semibold text-slate-900'>Add Member</h1>
             </div>
 
@@ -196,15 +160,15 @@ export default function AddMember() {
             </p>
           </div>
 
-          <Button variant='outline'>
-            <Link to={ROUTES.ADMIN.MEMBERS}>
-              <ArrowLeft className='mr-2 h-4 w-4' />
-              Back
-            </Link>
-          </Button>
+          <Link
+            to={ROUTES.ADMIN.MEMBERS}
+            className='inline-flex items-center justify-center rounded-md border border-input bg-background px-3 py-2 text-sm font-medium text-foreground hover:bg-muted'
+          >
+            <ArrowLeft className='mr-2 h-4 w-4' />
+            Back
+          </Link>
         </div>
 
-        {/* Tabs */}
         <div className='mb-6 flex w-fit rounded-lg border border-slate-200 bg-white p-1'>
           <button
             type='button'
@@ -232,336 +196,14 @@ export default function AddMember() {
         </div>
 
         {activeTab === 'single' ? (
-          <form onSubmit={handleSubmit}>
-            <div className='space-y-6'>
-              {/* Basic Information */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Basic Information</CardTitle>
-                  <CardDescription>Basic membership information.</CardDescription>
-                </CardHeader>
-
-                <CardContent>
-                  <div className='grid gap-5 md:grid-cols-3'>
-                    <FormField
-                      label='Member Code'
-                      name='memberCode'
-                      value={formData.memberCode}
-                      onChange={handleChange}
-                      required
-                    />
-
-                    <div className='space-y-2'>
-                      <Label htmlFor='memberType'>Member Type</Label>
-
-                      <select
-                        id='memberType'
-                        name='memberType'
-                        value={formData.memberType}
-                        onChange={handleChange}
-                        className='flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm'
-                      >
-                        <option value='MEMBER'>Member</option>
-                        <option value='ASSOCIATE'>Associate</option>
-                        <option value='SUPERUSER'>Superuser</option>
-                      </select>
-                    </div>
-
-                    <div className='space-y-2'>
-                      <Label htmlFor='status'>Status</Label>
-
-                      <select
-                        id='status'
-                        name='status'
-                        value={formData.status}
-                        onChange={handleChange}
-                        className='flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm'
-                      >
-                        <option value='ACTIVE'>Active</option>
-                        <option value='INACTIVE'>Inactive</option>
-                      </select>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Personal Information */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Personal Information</CardTitle>
-                </CardHeader>
-
-                <CardContent className='space-y-6'>
-                  <div className='grid gap-5 md:grid-cols-2'>
-                    <FormField
-                      label='Name'
-                      name='name'
-                      value={formData.name}
-                      onChange={handleChange}
-                      required
-                    />
-
-                    <FormField
-                      label='Name (Kannada)'
-                      name='nameKannada'
-                      value={formData.nameKannada}
-                      onChange={handleChange}
-                    />
-
-                    <FormField
-                      label='Father Name'
-                      name='fatherName'
-                      value={formData.fatherName}
-                      onChange={handleChange}
-                    />
-
-                    <FormField
-                      label='Father Name (Kannada)'
-                      name='fatherNameKannada'
-                      value={formData.fatherNameKannada}
-                      onChange={handleChange}
-                    />
-
-                    <FormField
-                      label='Spouse Name'
-                      name='spouseName'
-                      value={formData.spouseName}
-                      onChange={handleChange}
-                    />
-
-                    <FormField
-                      label='Spouse Name (Kannada)'
-                      name='spouseNameKannada'
-                      value={formData.spouseNameKannada}
-                      onChange={handleChange}
-                    />
-
-                    <FormField
-                      label='Care Of'
-                      name='careOfName'
-                      value={formData.careOfName}
-                      onChange={handleChange}
-                    />
-
-                    <FormField
-                      label='Care Of (Kannada)'
-                      name='careOfNameKannada'
-                      value={formData.careOfNameKannada}
-                      onChange={handleChange}
-                    />
-                  </div>
-
-                  <Separator />
-
-                  <div className='grid gap-5 md:grid-cols-2'>
-                    <div className='space-y-2'>
-                      <Label htmlFor='gender'>Gender</Label>
-
-                      <select
-                        id='gender'
-                        name='gender'
-                        value={formData.gender}
-                        onChange={handleChange}
-                        className='flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm'
-                      >
-                        <option value=''>Select gender</option>
-                        <option value='MALE'>Male</option>
-                        <option value='FEMALE'>Female</option>
-                        <option value='OTHER'>Other</option>
-                      </select>
-                    </div>
-
-                    <FormField
-                      label='Date of Birth'
-                      name='dob'
-                      type='date'
-                      value={formData.dob}
-                      onChange={handleChange}
-                    />
-
-                    <FormField
-                      label='Join Date'
-                      name='joinDate'
-                      type='date'
-                      value={formData.joinDate}
-                      onChange={handleChange}
-                    />
-                    <FormField
-                      label='Membership Date'
-                      name='membershipDate'
-                      type='date'
-                      value={formData.membershipDate}
-                      onChange={handleChange}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Contact */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Contact Information</CardTitle>
-                </CardHeader>
-
-                <CardContent>
-                  <div className='grid gap-5 md:grid-cols-2'>
-                    <FormField
-                      label='Mobile'
-                      name='mobile'
-                      value={formData.mobile}
-                      onChange={handleChange}
-                    />
-
-                    <FormField
-                      label='Alternate Mobile'
-                      name='alternateMobile'
-                      value={formData.alternateMobile}
-                      onChange={handleChange}
-                    />
-
-                    <FormField
-                      label='Email'
-                      name='email'
-                      type='email'
-                      value={formData.email}
-                      onChange={handleChange}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Address */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Address</CardTitle>
-                  <CardDescription>Current residential address.</CardDescription>
-                </CardHeader>
-
-                <CardContent className='space-y-6'>
-                  <div>
-                    <h3 className='mb-4 text-sm font-medium text-slate-700'>English</h3>
-
-                    <div className='grid gap-5 md:grid-cols-2'>
-                      <FormField
-                        label='Address Line 1'
-                        name='addressLine1'
-                        value={formData.addressLine1}
-                        onChange={handleChange}
-                      />
-
-                      <FormField
-                        label='Address Line 2'
-                        name='addressLine2'
-                        value={formData.addressLine2}
-                        onChange={handleChange}
-                      />
-
-                      <FormField
-                        label='City'
-                        name='city'
-                        value={formData.city}
-                        onChange={handleChange}
-                      />
-
-                      <FormField
-                        label='District'
-                        name='district'
-                        value={formData.district}
-                        onChange={handleChange}
-                      />
-
-                      <FormField
-                        label='Postal Code'
-                        name='postalCode'
-                        value={formData.postalCode}
-                        onChange={handleChange}
-                      />
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  <div>
-                    <h3 className='mb-4 text-sm font-medium text-slate-700'>Kannada</h3>
-
-                    <div className='grid gap-5 md:grid-cols-2'>
-                      <FormField
-                        label='Address Line 1 (Kannada)'
-                        name='addressLine1Kannada'
-                        value={formData.addressLine1Kannada}
-                        onChange={handleChange}
-                      />
-
-                      <FormField
-                        label='Address Line 2 (Kannada)'
-                        name='addressLine2Kannada'
-                        value={formData.addressLine2Kannada}
-                        onChange={handleChange}
-                      />
-
-                      <FormField
-                        label='City (Kannada)'
-                        name='cityKannada'
-                        value={formData.cityKannada}
-                        onChange={handleChange}
-                      />
-
-                      <FormField
-                        label='District (Kannada)'
-                        name='districtKannada'
-                        value={formData.districtKannada}
-                        onChange={handleChange}
-                      />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* KYC */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Identity / KYC</CardTitle>
-                </CardHeader>
-
-                <CardContent>
-                  <div className='grid gap-5 md:grid-cols-3'>
-                    <FormField
-                      label='Aadhaar Number'
-                      name='aadhaarNumber'
-                      value={formData.aadhaarNumber}
-                      onChange={handleChange}
-                    />
-
-                    <FormField
-                      label='PAN Number'
-                      name='panNumber'
-                      value={formData.panNumber}
-                      onChange={handleChange}
-                    />
-
-                    <FormField
-                      label='Other ID'
-                      name='otherId'
-                      value={formData.otherId}
-                      onChange={handleChange}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Submit */}
-              <div className='flex justify-end gap-3'>
-                <Button variant='outline' type='button'>
-                  <Link to={ROUTES.ADMIN.MEMBERS}>Cancel</Link>
-                </Button>
-
-                <Button type='submit'>
-                  <UserPlus className='mr-2 h-4 w-4' />
-                  Create Member
-                </Button>
-              </div>
-            </div>
-          </form>
+          <MemberForm
+            defaultValues={memberFormDefaultValues}
+            onSubmit={handleCreateMember}
+            submitLabel='Create Member'
+            isSubmitting={isSubmittingMember}
+            submitMessage={submitMessage}
+            cancelTo={ROUTES.ADMIN.MEMBERS}
+          />
         ) : (
           <BulkExcelUpload
             onUpload={handleExcelUpload}
@@ -576,48 +218,6 @@ export default function AddMember() {
     </main>
   );
 }
-
-/* -------------------------------------------------------------------------- */
-/* Form Field                                                                 */
-/* -------------------------------------------------------------------------- */
-
-function FormField({
-  label,
-  name,
-  value,
-  onChange,
-  type = 'text',
-  required = false,
-}: {
-  label: string;
-  name: string;
-  value: string;
-  onChange: (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
-  type?: string;
-  required?: boolean;
-}) {
-  return (
-    <div className='space-y-2'>
-      <Label htmlFor={name}>
-        {label}
-        {required && <span className='ml-1 text-red-500'>*</span>}
-      </Label>
-
-      <Input
-        id={name}
-        name={name}
-        type={type}
-        value={value}
-        onChange={onChange}
-        required={required}
-      />
-    </div>
-  );
-}
-
-/* -------------------------------------------------------------------------- */
-/* Excel Upload                                                               */
-/* -------------------------------------------------------------------------- */
 
 function BulkExcelUpload({
   onUpload,

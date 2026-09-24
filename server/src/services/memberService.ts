@@ -12,16 +12,76 @@ import {
 import { AppError } from "../utils/AppError.js";
 import { getValue, parseDateValue } from "../utils/memberImportHelpers.js";
 
+export interface UploadedMemberRow {
+  row: number;
+  memberCode: string;
+  name: string;
+}
+
+export interface FailedMemberRow {
+  row: number;
+  memberCode: string;
+  name: string;
+  error: string;
+}
+
+export interface CreateMemberInput {
+  memberCode?: string;
+  recieptNo?: string;
+  joinDate?: string | Date | null;
+  name?: string;
+  nameKannada?: string;
+  careOfName?: string;
+  careOfNameKannada?: string;
+  mobile?: string;
+  memberType?: string;
+  status?: string;
+  gender?: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  city?: string;
+  district?: string;
+  addressLine1Kannada?: string;
+  addressLine2Kannada?: string;
+  cityKannada?: string;
+  districtKannada?: string;
+  postalCode?: string;
+  fatherName?: string;
+  fatherNameKannada?: string;
+  spouseName?: string;
+  spouseNameKannada?: string;
+  dob?: string | Date | null;
+  alternateMobile?: string;
+  email?: string;
+  aadhaarNumber?: string;
+  panNumber?: string;
+  otherId?: string;
+  nomineeName?: string;
+  nomineeRelation?: string;
+  nomineeMobile?: string;
+  nomineeEmail?: string;
+  nomineeAddress?: string;
+  nomineeDateOfBirth?: string | Date | null;
+  occupation?: string;
+  permanentAddress?: string;
+  officeAddress?: string;
+  remarks?: string;
+}
+
 export interface MemberUploadResult {
   filename: string;
   size: number;
   totalRows: number;
   createdRows: number;
   failedRows: number;
-  rows: Array<{
+  created: Array<{
+    row: number;
+    memberId: string;
     memberCode: string;
     name: string;
   }>;
+  failed: FailedMemberRow[];
+  rows: UploadedMemberRow[];
   errors: string[];
 }
 
@@ -49,6 +109,32 @@ function normalizeGender(value?: string): GenderValue | null {
     : null;
 }
 
+function calculateDobFromAge(
+  ageValue: string | undefined,
+  joinDate: Date | null,
+): Date | null {
+  const fallbackDob = new Date(Date.UTC(1990, 0, 1));
+
+  if (!ageValue || !joinDate || Number.isNaN(joinDate.getTime())) {
+    return fallbackDob;
+  }
+
+  const age = Number(ageValue);
+
+  if (!Number.isFinite(age) || age < 0) {
+    return fallbackDob;
+  }
+
+  if (age === 0) {
+    return fallbackDob;
+  }
+
+  const dob = new Date(joinDate.getTime());
+  dob.setUTCFullYear(joinDate.getUTCFullYear() - age);
+
+  return dob;
+}
+
 function normalizeMemberRow(record: Record<string, unknown>) {
   return {
     memberCode: getValue(record, "memberCode"),
@@ -72,7 +158,185 @@ function normalizeMemberRow(record: Record<string, unknown>) {
     cityKannada: getValue(record, "cityKannada"),
     districtKannada: getValue(record, "districtKannada"),
     postalCode: getValue(record, "postalCode"),
+    permanentAddress: getValue(record, "permanentAddress"),
+    officeAddress: getValue(record, "officeAddress"),
   };
+}
+
+function expectRequiredString(value: unknown, fieldName: string): string {
+  const trimmed = String(value ?? "").trim();
+
+  if (!trimmed) {
+    throw new AppError(400, `${fieldName} is required.`);
+  }
+
+  return trimmed;
+}
+
+function expectMaxLength(value: unknown, fieldName: string, maxLength: number) {
+  const text = String(value ?? "").trim();
+
+  if (text && text.length > maxLength) {
+    throw new AppError(
+      400,
+      `${fieldName} should not exceed ${maxLength} characters.`,
+    );
+  }
+}
+
+const MEMBER_FIELD_MAX_LENGTHS: Record<string, number> = {
+  memberCode: 8,
+  recieptNo: 8,
+  name: 50,
+  nameKannada: 50,
+  careOfName: 50,
+  careOfNameKannada: 50,
+  mobile: 10,
+  addressLine1: 255,
+  addressLine2: 255,
+  city: 50,
+  district: 50,
+  addressLine1Kannada: 255,
+  addressLine2Kannada: 255,
+  cityKannada: 50,
+  districtKannada: 50,
+  postalCode: 6,
+  fatherName: 50,
+  fatherNameKannada: 50,
+  spouseName: 50,
+  spouseNameKannada: 50,
+  alternateMobile: 10,
+  email: 100,
+  aadhaarNumber: 16,
+  panNumber: 11,
+  otherId: 20,
+  nomineeName: 50,
+  nomineeRelation: 15,
+  nomineeMobile: 10,
+  nomineeEmail: 50,
+  nomineeAddress: 200,
+  occupation: 150,
+  permanentAddress: 200,
+  officeAddress: 200,
+  remarks: 200,
+};
+
+function validateMaxLengths(input: Record<string, unknown>) {
+  for (const [fieldName, maxLength] of Object.entries(
+    MEMBER_FIELD_MAX_LENGTHS,
+  )) {
+    const value = input[fieldName];
+
+    if (value === undefined || value === null || value === "") {
+      continue;
+    }
+
+    expectMaxLength(value, fieldName, maxLength);
+  }
+}
+
+export async function createMember(input: Record<string, unknown>) {
+  const memberCode = expectRequiredString(input.memberCode, "Member code");
+  const recieptNo = expectRequiredString(input.recieptNo, "Receipt number");
+  const joinDate = parseDateValue(input.joinDate);
+  const name = expectRequiredString(input.name, "Member name");
+  const nameKannada = expectRequiredString(
+    input.nameKannada,
+    "Name in Kannada",
+  );
+  const mobile = expectRequiredString(input.mobile, "Mobile number");
+  const addressLine1 = expectRequiredString(
+    input.addressLine1,
+    "Address line 1",
+  );
+  const addressLine2 = expectRequiredString(
+    input.addressLine2,
+    "Address line 2",
+  );
+  const city = expectRequiredString(input.city, "City");
+  const district = expectRequiredString(input.district, "District");
+
+  if (!joinDate) {
+    throw new AppError(400, "Join date is required.");
+  }
+
+  validateMaxLengths(input);
+
+  const postalCode = String(input.postalCode ?? "").trim();
+  const alternateMobile = String(input.alternateMobile ?? "").trim();
+  const nomineeMobile = String(input.nomineeMobile ?? "").trim();
+
+  expectMaxLength(memberCode, "Member code", 8);
+  expectMaxLength(recieptNo, "Receipt number", 8);
+  expectMaxLength(mobile, "Mobile number", 10);
+  expectMaxLength(alternateMobile, "Alternate mobile number", 10);
+  expectMaxLength(nomineeMobile, "Nominee mobile number", 10);
+  expectMaxLength(postalCode, "Postal code", 6);
+  expectMaxLength(
+    String(input.aadhaarNumber ?? "").trim(),
+    "Aadhaar number",
+    16,
+  );
+  expectMaxLength(String(input.panNumber ?? "").trim(), "PAN number", 11);
+
+  const existingMember = await prisma.member.findUnique({
+    where: { memberCode },
+  });
+
+  if (existingMember) {
+    throw new AppError(409, `Member code '${memberCode}' already exists.`);
+  }
+
+  const memberType = normalizeMemberType(String(input.memberType ?? "MEMBER"));
+  const status = normalizeMemberStatus(String(input.status ?? "ACTIVE"));
+  const gender = normalizeGender(String(input.gender ?? ""));
+  const dob = parseDateValue(input.dob);
+  const nomineeDateOfBirth = parseDateValue(input.nomineeDateOfBirth);
+
+  return prisma.member.create({
+    data: {
+      memberCode,
+      recieptNo,
+      joinDate,
+      name,
+      nameKannada,
+      careOfName: String(input.careOfName ?? "") || null,
+      careOfNameKannada: String(input.careOfNameKannada ?? "") || null,
+      mobile,
+      memberType,
+      status,
+      gender: gender ?? null,
+      addressLine1,
+      addressLine2,
+      city,
+      district,
+      addressLine1Kannada: String(input.addressLine1Kannada ?? "") || null,
+      addressLine2Kannada: String(input.addressLine2Kannada ?? "") || null,
+      cityKannada: String(input.cityKannada ?? "") || null,
+      districtKannada: String(input.districtKannada ?? "") || null,
+      postalCode: postalCode || null,
+      fatherName: String(input.fatherName ?? "") || null,
+      fatherNameKannada: String(input.fatherNameKannada ?? "") || null,
+      spouseName: String(input.spouseName ?? "") || null,
+      spouseNameKannada: String(input.spouseNameKannada ?? "") || null,
+      dob: dob ?? null,
+      alternateMobile: alternateMobile || null,
+      email: String(input.email ?? "") || null,
+      aadhaarNumber: String(input.aadhaarNumber ?? "") || null,
+      panNumber: String(input.panNumber ?? "") || null,
+      otherId: String(input.otherId ?? "") || null,
+      nomineeName: String(input.nomineeName ?? "") || null,
+      nomineeRelation: String(input.nomineeRelation ?? "") || null,
+      nomineeMobile: nomineeMobile || null,
+      nomineeEmail: String(input.nomineeEmail ?? "") || null,
+      nomineeAddress: String(input.nomineeAddress ?? "") || null,
+      nomineeDateOfBirth: nomineeDateOfBirth ?? null,
+      occupation: String(input.occupation ?? "") || null,
+      permanentAddress: String(input.permanentAddress ?? "") || null,
+      officeAddress: String(input.officeAddress ?? "") || null,
+      remarks: String(input.remarks ?? "") || null,
+    },
+  });
 }
 
 export async function uploadMembersFromFile(
@@ -103,14 +367,91 @@ export async function uploadMembersFromFile(
     );
   }
 
-  const createdRows: Array<{ memberCode: string; name: string }> = [];
-  const failedRows: string[] = [];
+  const created: Array<{
+    row: number;
+    memberId: string;
+    memberCode: string;
+    name: string;
+  }> = [];
+  const failed: FailedMemberRow[] = [];
 
   for (const [index, row] of rows.entries()) {
     const record = normalizeMemberRow(row);
+    const currentRow = index + 2;
 
-    if (!record.memberCode || !record.name) {
-      failedRows.push(`Row ${index + 2}: missing MemberCode or Name`);
+    const normalizedMemberCode = String(record.memberCode ?? "").trim();
+    const normalizedName = String(record.name ?? "").trim();
+    const normalizedNameKannada = String(record.nameKannada ?? "").trim();
+    const normalizedMobile = String(record.mobile ?? "").trim();
+    const normalizedAddressLine1 = String(record.addressLine1 ?? "").trim();
+    const normalizedAddressLine2 = String(record.addressLine2 ?? "").trim();
+    const normalizedCity = String(record.city ?? "").trim();
+    const normalizedDistrict = String(record.district ?? "").trim();
+    const normalizedPostalCode = String(record.postalCode ?? "").trim();
+    let rowLengthError: string | null = null;
+
+    for (const [fieldName, maxLength] of Object.entries(
+      MEMBER_FIELD_MAX_LENGTHS,
+    )) {
+      const value = (record as Record<string, unknown>)[fieldName];
+
+      if (value === undefined || value === null || value === "") {
+        continue;
+      }
+
+      if (String(value).trim().length > maxLength) {
+        rowLengthError = `${fieldName} should not exceed ${maxLength} characters.`;
+        break;
+      }
+    }
+
+    if (rowLengthError) {
+      failed.push({
+        row: currentRow,
+        memberCode: normalizedMemberCode,
+        name: normalizedName,
+        error: rowLengthError,
+      });
+      continue;
+    }
+
+    if (
+      !normalizedMemberCode ||
+      !normalizedName ||
+      !normalizedNameKannada ||
+      !normalizedMobile ||
+      !normalizedAddressLine1 ||
+      !normalizedAddressLine2 ||
+      !normalizedCity ||
+      !normalizedDistrict
+    ) {
+      failed.push({
+        row: currentRow,
+        memberCode: normalizedMemberCode,
+        name: normalizedName,
+        error:
+          "Required fields missing: memberCode, name, nameKannada, mobile, addressLine1, addressLine2, city, or district.",
+      });
+      continue;
+    }
+
+    if (normalizedMobile.length > 10) {
+      failed.push({
+        row: currentRow,
+        memberCode: normalizedMemberCode,
+        name: normalizedName,
+        error: "Mobile number should not exceed 10 characters.",
+      });
+      continue;
+    }
+
+    if (normalizedPostalCode && normalizedPostalCode.length > 6) {
+      failed.push({
+        row: currentRow,
+        memberCode: normalizedMemberCode,
+        name: normalizedName,
+        error: "Postal code should not exceed 6 characters.",
+      });
       continue;
     }
 
@@ -118,40 +459,51 @@ export async function uploadMembersFromFile(
       const memberType = normalizeMemberType(record.memberType);
       const status = normalizeMemberStatus(record.status);
       const gender = normalizeGender(record.gender);
+      const dob = calculateDobFromAge(record.age, record.joinDate ?? null);
 
-      const created = await prisma.member.create({
+      const member = await prisma.member.create({
         data: {
-          memberCode: record.memberCode,
-          recieptNo: record.recieptNo || null,
+          memberCode: normalizedMemberCode,
+          recieptNo: String(record.recieptNo ?? "").trim() || null,
           joinDate: record.joinDate ?? null,
-          name: record.name,
-          nameKannada: record.nameKannada || null,
+          name: normalizedName,
+          nameKannada: normalizedNameKannada,
           careOfName: record.careOfName || null,
           careOfNameKannada: record.careOfNameKannada || null,
-          age: record.age || null,
-          mobile: record.mobile || null,
+          dob: dob ?? null,
+          mobile: normalizedMobile,
           memberType,
           status,
           gender: gender ?? null,
-          addressLine1: record.addressLine1 || null,
-          addressLine2: record.addressLine2 || null,
-          city: record.city || null,
-          district: record.district || null,
+          addressLine1: normalizedAddressLine1,
+          addressLine2: normalizedAddressLine2,
+          city: normalizedCity,
+          district: normalizedDistrict,
           addressLine1Kannada: record.addressLine1Kannada || null,
           addressLine2Kannada: record.addressLine2Kannada || null,
           cityKannada: record.cityKannada || null,
           districtKannada: record.districtKannada || null,
-          postalCode: record.postalCode || null,
+          postalCode: normalizedPostalCode || null,
+          permanentAddress:
+            String(record.permanentAddress ?? "").trim() || null,
+          officeAddress: String(record.officeAddress ?? "").trim() || null,
         },
       });
 
-      createdRows.push({
-        memberCode: created.memberCode,
-        name: created.name,
+      created.push({
+        row: currentRow,
+        memberId: member.memberId.toString(),
+        memberCode: member.memberCode,
+        name: member.name,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown error";
-      failedRows.push(`Row ${index + 2}: ${message}`);
+      failed.push({
+        row: currentRow,
+        memberCode: record.memberCode,
+        name: record.name,
+        error: message,
+      });
     }
   }
 
@@ -159,9 +511,18 @@ export async function uploadMembersFromFile(
     filename: fileName,
     size: buffer.length,
     totalRows: rows.length,
-    createdRows: createdRows.length,
-    failedRows: failedRows.length,
-    rows: createdRows,
-    errors: failedRows,
+    createdRows: created.length,
+    failedRows: failed.length,
+    created,
+    failed,
+    rows: created.map(({ row, memberCode, name }) => ({
+      row,
+      memberCode,
+      name,
+    })),
+    errors: failed.map(
+      ({ row, memberCode, name, error }) =>
+        `Row ${row}: ${memberCode || name || "unknown"} - ${error}`,
+    ),
   };
 }
