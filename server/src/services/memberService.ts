@@ -268,6 +268,7 @@ export async function getMembers(params?: {
     "name",
     "status",
     "mobile",
+    "postalCode",
   ].includes(params?.sortBy ?? "")
     ? (params?.sortBy as string)
     : "memberCode";
@@ -355,11 +356,27 @@ export async function getMembers(params?: {
     }),
   ]);
 
+  const normalizedItems = items.map((member) => ({
+    ...member,
+    memberId: member.memberId.toString(),
+  }));
+
+  const sortedItems =
+    sortBy === "postalCode"
+      ? [...normalizedItems].sort((a, b) => {
+          const aCode = Number.parseInt(String(a.postalCode ?? "0"), 10);
+          const bCode = Number.parseInt(String(b.postalCode ?? "0"), 10);
+
+          if (Number.isNaN(aCode) && Number.isNaN(bCode)) return 0;
+          if (Number.isNaN(aCode)) return sortOrder === "asc" ? 1 : -1;
+          if (Number.isNaN(bCode)) return sortOrder === "asc" ? -1 : 1;
+
+          return sortOrder === "asc" ? aCode - bCode : bCode - aCode;
+        })
+      : normalizedItems;
+
   return {
-    items: items.map((member) => ({
-      ...member,
-      memberId: member.memberId.toString(),
-    })),
+    items: sortedItems,
     total,
     page: safePage,
     limit: safeLimit,

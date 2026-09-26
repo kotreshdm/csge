@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, FileSpreadsheet, Upload, UserPlus } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
@@ -7,9 +7,13 @@ import { createMember, uploadMembersFile } from '../../api/members';
 import { ROUTES } from '../../const/routs';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import MemberForm, { memberFormDefaultValues, type MemberFormValues } from '../../components/members/MemberForm';
+import MemberForm, {
+  memberFormDefaultValues,
+  type MemberFormValues,
+} from '../../components/members/MemberForm';
 
 export default function AddMember() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'single' | 'excel'>('single');
   const [excelUploadMessage, setExcelUploadMessage] = useState<{
     type: 'success' | 'error';
@@ -34,6 +38,7 @@ export default function AddMember() {
         type: 'success',
         message: response.message || 'Member created successfully.',
       });
+      navigate(ROUTES.ADMIN.MEMBERS);
     } catch (error) {
       const message =
         error && typeof error === 'object' && 'message' in error

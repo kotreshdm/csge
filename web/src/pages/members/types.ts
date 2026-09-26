@@ -4,7 +4,7 @@ export type SortField =
   | 'joinDate'
   | 'name'
   | 'status'
-  | 'mobile';
+  | 'postalCode';
 
 export type SortOrder = 'asc' | 'desc';
 

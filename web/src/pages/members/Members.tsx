@@ -91,72 +91,52 @@ export default function Members() {
           languageLabel='ಕನ್ನಡ'
           languageValue={showKannada}
           onToggleLanguage={() => setShowKannada(value => !value)}
-        />
+        >
+          <select
+            value={memberType}
+            onChange={event => {
+              setPage(1);
+              setMemberType(event.target.value);
+            }}
+            className='rounded-md border border-slate-200 px-3 py-2 text-sm'
+          >
+            {memberTypeOptions.map(option => (
+              <option key={option.value || 'all-types'} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
 
-        {/* Filters */}
-        <div className='mt-5 rounded-xl border border-slate-200 bg-white p-4'>
-          <div className='flex flex-wrap gap-3'>
-            <select
-              value={memberType}
-              onChange={event => {
-                setPage(1);
-                setMemberType(event.target.value);
-              }}
-              className='rounded-md border border-slate-200 px-3 py-2 text-sm'
-            >
-              {memberTypeOptions.map(option => (
-                <option key={option.value || 'all-types'} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+          <select
+            value={status}
+            onChange={event => {
+              setPage(1);
+              setStatus(event.target.value);
+            }}
+            className='rounded-md border border-slate-200 px-3 py-2 text-sm'
+          >
+            {memberStatusOptions.map(option => (
+              <option key={option.value || 'all-status'} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
 
-            <select
-              value={status}
-              onChange={event => {
-                setPage(1);
-                setStatus(event.target.value);
-              }}
-              className='rounded-md border border-slate-200 px-3 py-2 text-sm'
-            >
-              {memberStatusOptions.map(option => (
-                <option key={option.value || 'all-status'} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-
-            <select
-              value={gender}
-              onChange={event => {
-                setPage(1);
-                setGender(event.target.value);
-              }}
-              className='rounded-md border border-slate-200 px-3 py-2 text-sm'
-            >
-              {memberGenderOptions.map(option => (
-                <option key={option.value || 'all-gender'} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-
-            <select
-              value={limit}
-              onChange={event => {
-                setPage(1);
-                setLimit(Number(event.target.value));
-              }}
-              className='rounded-md border border-slate-200 px-3 py-2 text-sm'
-            >
-              {pageSizes.map(size => (
-                <option key={size} value={size}>
-                  {size} / page
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
+          <select
+            value={gender}
+            onChange={event => {
+              setPage(1);
+              setGender(event.target.value);
+            }}
+            className='rounded-md border border-slate-200 px-3 py-2 text-sm'
+          >
+            {memberGenderOptions.map(option => (
+              <option key={option.value || 'all-gender'} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </PageToolbar>
 
         {/* Table */}
         <div className='mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white'>
@@ -222,19 +202,19 @@ export default function Members() {
                     </th>
                     <th className='px-4 py-3'>Father Name</th>
 
+                    <th className='px-4 py-3'>Mobile</th>
+
+                    <th className='px-4 py-3'>Address</th>
+                    <th className='px-4 py-3'>Dist</th>
                     <th className='px-4 py-3'>
                       <SortHeader
-                        label='Mobile'
-                        field='mobile'
+                        label='Pincode'
+                        field='postalCode'
                         sortBy={sortBy as SortField}
                         sortOrder={sortOrder}
                         onSort={handleSort}
                       />
                     </th>
-
-                    <th className='px-4 py-3'>Address</th>
-                    <th className='px-4 py-3'>Dist</th>
-                    <th className='px-4 py-3'>Pincode</th>
                   </tr>
                 </thead>
 
@@ -270,18 +250,18 @@ export default function Members() {
                     return (
                       <tr
                         key={member.memberId}
-                        className='border-b border-slate-100 last:border-0 hover:bg-slate-50'
+                        className='border-b border-slate-200 last:border-0  odd:bg-slate-50  even:bg-slate-200 hover:bg-slate-300'
                       >
                         {/* SL NO */}
                         <td className='px-4 py-3 text-slate-500'>{serialNumber}</td>
                         {/* MEMBER */}
                         <td className='px-4 py-3'>
-                          <div className='mt-0.5 text-xs text-slate-500'>
+                          <div className='mt-0.5 text-sm text-slate-500'>
                             {highlightText(member.memberCode, search)}
                           </div>
                         </td>
                         <td className='px-4 py-3'>
-                          <div className='mt-0.5 text-xs text-slate-500'>
+                          <div className='mt-0.5 text-sm text-slate-500'>
                             {highlightText(member.recieptNo, search)}
                           </div>
                         </td>
@@ -332,10 +312,23 @@ export default function Members() {
           {/* Pagination */}
           {totalPages > 1 && (
             <div className='flex items-center justify-between border-t border-slate-200 px-4 py-3'>
+              <select
+                value={limit}
+                onChange={event => {
+                  setPage(1);
+                  setLimit(Number(event.target.value));
+                }}
+                className='rounded-md border border-slate-200 px-3 py-2 text-sm'
+              >
+                {pageSizes.map(size => (
+                  <option key={size} value={size}>
+                    {size}
+                  </option>
+                ))}
+              </select>
               <span className='text-sm text-slate-500'>
                 Page {page} of {totalPages}
               </span>
-
               <div className='flex gap-2'>
                 <Button
                   variant='outline'
