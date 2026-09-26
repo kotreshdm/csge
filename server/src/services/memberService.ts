@@ -1,4 +1,10 @@
 import * as XLSX from "xlsx";
+import {
+  Prisma,
+  type Gender,
+  type MemberStatus,
+  type MemberType,
+} from "@prisma/client";
 
 import prisma from "../db/prisma.js";
 import {
@@ -251,15 +257,20 @@ export async function getMembers(params?: {
   const searchValue =
     typeof params?.search === "string" ? params.search.trim() : "";
   const baseFilters = params?.filters ?? {};
-  const memberType = typeof params?.memberType === "string" ? params.memberType : "";
+  const memberType =
+    typeof params?.memberType === "string" ? params.memberType : "";
   const status = typeof params?.status === "string" ? params.status : "";
   const gender = typeof params?.gender === "string" ? params.gender : "";
-  const sortBy =
-    ["memberCode", "recieptNo", "joinDate", "name", "status", "mobile"].includes(
-      params?.sortBy ?? "",
-    )
-      ? (params?.sortBy as string)
-      : "memberCode";
+  const sortBy = [
+    "memberCode",
+    "recieptNo",
+    "joinDate",
+    "name",
+    "status",
+    "mobile",
+  ].includes(params?.sortBy ?? "")
+    ? (params?.sortBy as string)
+    : "memberCode";
   const sortOrder = params?.sortOrder === "desc" ? "desc" : "asc";
 
   const safePage = Number.isFinite(page) && page > 0 ? Math.floor(page) : 1;
@@ -272,13 +283,13 @@ export async function getMembers(params?: {
       : 20;
   const where: Prisma.MemberWhereInput = {
     ...(memberType && {
-      memberType: memberType as Prisma.MemberType,
+      memberType: memberType as MemberType,
     }),
     ...(status && {
-      status: status as Prisma.MemberStatus,
+      status: status as MemberStatus,
     }),
     ...(gender && {
-      gender: gender as Prisma.Gender,
+      gender: gender as Gender,
     }),
     ...(searchValue && {
       OR: [
@@ -320,6 +331,8 @@ export async function getMembers(params?: {
         recieptNo: true,
         name: true,
         nameKannada: true,
+        careOfName: true,
+        careOfNameKannada: true,
         mobile: true,
         memberType: true,
         status: true,
@@ -412,7 +425,7 @@ export async function createMember(input: Record<string, unknown>) {
   const dob = parseDateValue(input.dob);
   const nomineeDateOfBirth = parseDateValue(input.nomineeDateOfBirth);
 
-  return prisma.member.create({
+  const createdMember = await prisma.member.create({
     data: {
       memberCode,
       recieptNo,
@@ -456,6 +469,11 @@ export async function createMember(input: Record<string, unknown>) {
       remarks: String(input.remarks ?? "") || null,
     },
   });
+
+  return {
+    ...createdMember,
+    memberId: createdMember.memberId.toString(),
+  };
 }
 
 export async function uploadMembersFromFile(
@@ -534,22 +552,12 @@ export async function uploadMembersFromFile(
       continue;
     }
 
-    if (
-      !normalizedMemberCode ||
-      !normalizedName ||
-      !normalizedNameKannada ||
-      !normalizedMobile ||
-      !normalizedAddressLine1 ||
-      !normalizedAddressLine2 ||
-      !normalizedCity ||
-      !normalizedDistrict
-    ) {
+    if (!normalizedMemberCode || !normalizedName || !normalizedNameKannada) {
       failed.push({
         row: currentRow,
         memberCode: normalizedMemberCode,
         name: normalizedName,
-        error:
-          "Required fields missing: memberCode, name, nameKannada, mobile, addressLine1, addressLine2, city, or district.",
+        error: "Required fields missing: memberCode, name, nameKannada",
       });
       continue;
     }

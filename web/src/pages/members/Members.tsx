@@ -1,69 +1,17 @@
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
 import { ROUTES } from '../../const/routs';
+import { pageSizes } from '../../const/common';
 import { Button } from '@/components/ui/button';
 import { getMembers } from '../../api/members';
+import { memberGenderOptions, memberStatusOptions, memberTypeOptions } from './filterOptions';
+import { highlightText } from './helpers';
 
-const pageSizes = [20, 50, 100];
-
-const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-const highlightText = (text: string | null | undefined, query: string) => {
-  const value = String(text ?? '');
-  const trimmedQuery = query.trim();
-
-  if (!trimmedQuery) {
-    return value;
-  }
-
-  const pattern = new RegExp(`(${escapeRegExp(trimmedQuery)})`, 'gi');
-  const parts = value.split(pattern);
-
-  return parts.map((part, index) => {
-    const isMatch = part.toLowerCase() === trimmedQuery.toLowerCase();
-
-    return isMatch ? (
-      <mark key={`${part}-${index}`} className='rounded bg-yellow-200 px-0.5 text-yellow-900'>
-        {part}
-      </mark>
-    ) : (
-      <span key={`${part}-${index}`}>{part}</span>
-    );
-  });
-};
-
-type SortField = 'memberCode' | 'recieptNo' | 'joinDate' | 'name' | 'status' | 'mobile';
-
-type SortOrder = 'asc' | 'desc';
-
-interface SortHeaderProps {
-  label: string;
-  field: SortField;
-  sortBy: SortField;
-  sortOrder: SortOrder;
-  onSort: (field: SortField) => void;
-}
-
-function SortHeader({ label, field, sortBy, sortOrder, onSort }: SortHeaderProps) {
-  const active = sortBy === field;
-
-  return (
-    <button
-      type='button'
-      onClick={() => onSort(field)}
-      className='inline-flex items-center gap-1 font-medium hover:text-slate-900'
-    >
-      {label}
-
-      <span className='text-xs text-slate-400'>
-        {active ? (sortOrder === 'asc' ? '↑' : '↓') : '↕'}
-      </span>
-    </button>
-  );
-}
+import { SortHeader } from './SortHeader';
+import type { SortField, SortOrder } from './types';
+import { PageToolbar } from '../../components/PageToolbar';
 
 export default function Members() {
   const [page, setPage] = useState(1);
@@ -74,8 +22,8 @@ export default function Members() {
   const [gender, setGender] = useState('');
   const [showKannada, setShowKannada] = useState(false);
 
-  const [sortBy, setSortBy] = useState('memberCode');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [sortBy, setSortBy] = useState<SortField>('memberCode');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
 
   const filters = useMemo(
     () => ({
@@ -126,36 +74,24 @@ export default function Members() {
   return (
     <main className='min-h-screen bg-slate-50 p-6'>
       <div className='mx-auto max-w-7xl'>
-        {/* Header */}
-        <div className='flex flex-wrap items-center gap-3'>
-          <h1 className='mr-auto text-2xl font-semibold text-slate-900'>Members</h1>
-
-          <input
-            value={search}
-            onChange={event => {
-              setPage(1);
-              setSearch(event.target.value);
-            }}
-            placeholder='Search member, receipt, mobile, address...'
-            className='w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-slate-400 sm:w-80'
-          />
-
-          {/* Kannada / English */}
-          <Button
-            variant={showKannada ? 'default' : 'outline'}
-            onClick={() => setShowKannada(value => !value)}
-          >
-            {showKannada ? 'English' : 'ಕನ್ನಡ'}
-          </Button>
-
-          <Button variant='outline' onClick={resetFilters}>
-            Reset
-          </Button>
-
-          <Button asChild>
-            <Link to={ROUTES.ADMIN.MEMBERS_ADD}>Add Member</Link>
-          </Button>
-        </div>
+        <PageToolbar
+          title='Members'
+          searchValue={search}
+          onSearchChange={value => {
+            setPage(1);
+            setSearch(value);
+          }}
+          searchPlaceholder='Search member, receipt, mobile, address...'
+          secondaryActionLabel='Reset'
+          secondaryActionVariant='outline'
+          onSecondaryAction={resetFilters}
+          primaryActionLabel='Add Member'
+          primaryActionPath={ROUTES.ADMIN.MEMBERS_ADD}
+          showLanguageToggle
+          languageLabel='ಕನ್ನಡ'
+          languageValue={showKannada}
+          onToggleLanguage={() => setShowKannada(value => !value)}
+        />
 
         {/* Filters */}
         <div className='mt-5 rounded-xl border border-slate-200 bg-white p-4'>
@@ -168,10 +104,11 @@ export default function Members() {
               }}
               className='rounded-md border border-slate-200 px-3 py-2 text-sm'
             >
-              <option value=''>All types</option>
-              <option value='MEMBER'>Member</option>
-              <option value='ASSOCIATE'>Associate</option>
-              <option value='SUPERUSER'>Superuser</option>
+              {memberTypeOptions.map(option => (
+                <option key={option.value || 'all-types'} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
             </select>
 
             <select
@@ -182,12 +119,11 @@ export default function Members() {
               }}
               className='rounded-md border border-slate-200 px-3 py-2 text-sm'
             >
-              <option value=''>All status</option>
-              <option value='ACTIVE'>Active</option>
-              <option value='INACTIVE'>Inactive</option>
-              <option value='INCORRECT'>Incorrect</option>
-              <option value='RESIGNED'>Resigned</option>
-              <option value='DECEASED'>Deceased</option>
+              {memberStatusOptions.map(option => (
+                <option key={option.value || 'all-status'} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
             </select>
 
             <select
@@ -198,10 +134,11 @@ export default function Members() {
               }}
               className='rounded-md border border-slate-200 px-3 py-2 text-sm'
             >
-              <option value=''>All gender</option>
-              <option value='MALE'>Male</option>
-              <option value='FEMALE'>Female</option>
-              <option value='OTHER'>Other</option>
+              {memberGenderOptions.map(option => (
+                <option key={option.value || 'all-gender'} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
             </select>
 
             <select
@@ -283,6 +220,7 @@ export default function Members() {
                         onSort={handleSort}
                       />
                     </th>
+                    <th className='px-4 py-3'>Father Name</th>
 
                     <th className='px-4 py-3'>
                       <SortHeader
@@ -295,6 +233,8 @@ export default function Members() {
                     </th>
 
                     <th className='px-4 py-3'>Address</th>
+                    <th className='px-4 py-3'>Dist</th>
+                    <th className='px-4 py-3'>Pincode</th>
                   </tr>
                 </thead>
 
@@ -303,26 +243,20 @@ export default function Members() {
                     const serialNumber = (page - 1) * limit + index + 1;
 
                     const address = showKannada
-                      ? [
-                          member.addressLine1Kannada,
-                          member.addressLine2Kannada,
-                          member.cityKannada,
-                          member.districtKannada,
-                          member.postalCode ? `- ${member.postalCode}` : null,
-                        ]
+                      ? [member.addressLine1Kannada, member.addressLine2Kannada, member.cityKannada]
                           .filter(Boolean)
                           .join(', ')
-                      : [
-                          member.addressLine1,
-                          member.addressLine2,
-                          member.city,
-                          member.district,
-                          member.postalCode ? `- ${member.postalCode}` : null,
-                        ]
+                      : [member.addressLine1, member.addressLine2, member.city]
                           .filter(Boolean)
                           .join(', ');
 
                     const name = showKannada ? member.nameKannada || member.name : member.name;
+                    const fatherName = showKannada
+                      ? member.careOfNameKannada || member.careOfName
+                      : member.careOfName;
+                    const district = showKannada
+                      ? member.districtKannada || member.district
+                      : member.district;
 
                     const statusColor =
                       member.status === 'ACTIVE'
@@ -370,6 +304,9 @@ export default function Members() {
                             {highlightText(name, search)}
                           </div>
                         </td>
+                        <td>
+                          <div className='font-medium text-slate-900'>{fatherName}</div>
+                        </td>
                         {/* MOBILE */}
                         <td className='px-4 py-3'>
                           {member.mobile ? highlightText(member.mobile, search) : '-'}
@@ -377,6 +314,12 @@ export default function Members() {
                         {/* ADDRESS */}
                         <td className='max-w-md px-4 py-3 text-slate-600'>
                           {address ? highlightText(address, search) : '-'}
+                        </td>
+                        <td className='max-w-md px-4 py-3 text-slate-600'>
+                          {district ? highlightText(district, search) : '-'}
+                        </td>
+                        <td className='max-w-md px-4 py-3 text-slate-600'>
+                          {member.postalCode ? highlightText(member.postalCode, search) : '-'}
                         </td>
                       </tr>
                     );
