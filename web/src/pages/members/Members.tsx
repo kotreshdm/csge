@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
@@ -215,6 +216,7 @@ export default function Members() {
                         onSort={handleSort}
                       />
                     </th>
+                    <th className='px-4 py-3 text-right'>Action</th>
                   </tr>
                 </thead>
 
@@ -300,6 +302,15 @@ export default function Members() {
                         </td>
                         <td className='max-w-md px-4 py-3 text-slate-600'>
                           {member.postalCode ? highlightText(member.postalCode, search) : '-'}
+                        </td>
+                        <td className='px-4 py-3 text-right'>
+                          <Link
+                            to={ROUTES.ADMIN.MEMBERS_EDIT(member.memberId)}
+                            state={{ member }}
+                            className='inline-flex items-center rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100'
+                          >
+                            Edit
+                          </Link>
                         </td>
                       </tr>
                     );

@@ -164,17 +164,6 @@ export default function AddMember() {
               Create a new member or upload multiple members using Excel.
             </p>
           </div>
-
-          <Link
-            to={ROUTES.ADMIN.MEMBERS}
-            className='inline-flex items-center justify-center rounded-md border border-input bg-background px-3 py-2 text-sm font-medium text-foreground hover:bg-muted'
-          >
-            <ArrowLeft className='mr-2 h-4 w-4' />
-            Back
-          </Link>
-        </div>
-
-        <div className='mb-6 flex w-fit rounded-lg border border-slate-200 bg-white p-1'>
           <button
             type='button'
             onClick={() => setActiveTab('single')}
@@ -186,7 +175,6 @@ export default function AddMember() {
           >
             Add Single Member
           </button>
-
           <button
             type='button'
             onClick={() => setActiveTab('excel')}
@@ -198,6 +186,13 @@ export default function AddMember() {
           >
             Bulk Excel Upload
           </button>
+          <Link
+            to={ROUTES.ADMIN.MEMBERS}
+            className='inline-flex items-center justify-center rounded-md border border-input bg-background px-3 py-2 text-sm font-medium text-foreground hover:bg-muted'
+          >
+            <ArrowLeft className='mr-2 h-4 w-4' />
+            Back
+          </Link>
         </div>
 
         {activeTab === 'single' ? (

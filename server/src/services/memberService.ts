@@ -493,6 +493,136 @@ export async function createMember(input: Record<string, unknown>) {
   };
 }
 
+export async function updateMember(
+  memberId: string,
+  input: Record<string, unknown>,
+) {
+  const memberIdentifier = Number(memberId);
+
+  if (!Number.isFinite(memberIdentifier) || memberIdentifier <= 0) {
+    throw new AppError(400, "Invalid member id.");
+  }
+
+  const existingMember = await prisma.member.findUnique({
+    where: { memberId: BigInt(memberId) },
+  });
+
+  if (!existingMember) {
+    throw new AppError(404, "Member not found.");
+  }
+
+  const memberCode = expectRequiredString(input.memberCode, "Member code");
+  const recieptNo = expectRequiredString(input.recieptNo, "Receipt number");
+  const joinDate = parseDateValue(input.joinDate);
+  const name = expectRequiredString(input.name, "Member name");
+  const nameKannada = expectRequiredString(
+    input.nameKannada,
+    "Name in Kannada",
+  );
+  const mobile = expectRequiredString(input.mobile, "Mobile number");
+  const addressLine1 = expectRequiredString(
+    input.addressLine1,
+    "Address line 1",
+  );
+  const addressLine2 = expectRequiredString(
+    input.addressLine2,
+    "Address line 2",
+  );
+  const city = expectRequiredString(input.city, "City");
+  const district = expectRequiredString(input.district, "District");
+
+  if (!joinDate) {
+    throw new AppError(400, "Join date is required.");
+  }
+
+  validateMaxLengths(input);
+
+  const postalCode = String(input.postalCode ?? "").trim();
+  const alternateMobile = String(input.alternateMobile ?? "").trim();
+  const nomineeMobile = String(input.nomineeMobile ?? "").trim();
+
+  expectMaxLength(memberCode, "Member code", 8);
+  expectMaxLength(recieptNo, "Receipt number", 8);
+  expectMaxLength(mobile, "Mobile number", 10);
+  expectMaxLength(alternateMobile, "Alternate mobile number", 10);
+  expectMaxLength(nomineeMobile, "Nominee mobile number", 10);
+  expectMaxLength(postalCode, "Postal code", 6);
+  expectMaxLength(
+    String(input.aadhaarNumber ?? "").trim(),
+    "Aadhaar number",
+    16,
+  );
+  expectMaxLength(String(input.panNumber ?? "").trim(), "PAN number", 11);
+
+  const memberWithSameCode = await prisma.member.findUnique({
+    where: { memberCode },
+  });
+
+  if (
+    memberWithSameCode &&
+    memberWithSameCode.memberId !== existingMember.memberId
+  ) {
+    throw new AppError(409, `Member code '${memberCode}' already exists.`);
+  }
+
+  const memberType = normalizeMemberType(String(input.memberType ?? "MEMBER"));
+  const status = normalizeMemberStatus(String(input.status ?? "ACTIVE"));
+  const gender = normalizeGender(String(input.gender ?? ""));
+  const dob = parseDateValue(input.dob);
+  const nomineeDateOfBirth = parseDateValue(input.nomineeDateOfBirth);
+
+  const updatedMember = await prisma.member.update({
+    where: { memberId: existingMember.memberId },
+    data: {
+      memberCode,
+      recieptNo,
+      joinDate,
+      name,
+      nameKannada,
+      careOfName: String(input.careOfName ?? "") || null,
+      careOfNameKannada: String(input.careOfNameKannada ?? "") || null,
+      mobile,
+      memberType,
+      status,
+      gender: gender ?? null,
+      addressLine1,
+      addressLine2,
+      city,
+      district,
+      addressLine1Kannada: String(input.addressLine1Kannada ?? "") || null,
+      addressLine2Kannada: String(input.addressLine2Kannada ?? "") || null,
+      cityKannada: String(input.cityKannada ?? "") || null,
+      districtKannada: String(input.districtKannada ?? "") || null,
+      postalCode: postalCode || null,
+      fatherName: String(input.fatherName ?? "") || null,
+      fatherNameKannada: String(input.fatherNameKannada ?? "") || null,
+      spouseName: String(input.spouseName ?? "") || null,
+      spouseNameKannada: String(input.spouseNameKannada ?? "") || null,
+      dob: dob ?? null,
+      alternateMobile: alternateMobile || null,
+      email: String(input.email ?? "") || null,
+      aadhaarNumber: String(input.aadhaarNumber ?? "") || null,
+      panNumber: String(input.panNumber ?? "") || null,
+      otherId: String(input.otherId ?? "") || null,
+      nomineeName: String(input.nomineeName ?? "") || null,
+      nomineeRelation: String(input.nomineeRelation ?? "") || null,
+      nomineeMobile: nomineeMobile || null,
+      nomineeEmail: String(input.nomineeEmail ?? "") || null,
+      nomineeAddress: String(input.nomineeAddress ?? "") || null,
+      nomineeDateOfBirth: nomineeDateOfBirth ?? null,
+      occupation: String(input.occupation ?? "") || null,
+      permanentAddress: String(input.permanentAddress ?? "") || null,
+      officeAddress: String(input.officeAddress ?? "") || null,
+      remarks: String(input.remarks ?? "") || null,
+    },
+  });
+
+  return {
+    ...updatedMember,
+    memberId: updatedMember.memberId.toString(),
+  };
+}
+
 export async function uploadMembersFromFile(
   buffer: Buffer,
   fileName: string,

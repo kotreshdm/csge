@@ -1,8 +1,9 @@
-import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useMemo, useState } from 'react';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 
 import { ROUTES } from '../../const/routs';
+import { updateMember } from '../../api/members';
 import MemberForm, {
   memberFormDefaultValues,
   type MemberFormValues,
@@ -10,21 +11,52 @@ import MemberForm, {
 
 export default function EditMember() {
   const { id } = useParams();
+  const { state } = useLocation() as { state?: { member?: Record<string, unknown> } };
+  const member = state?.member;
   const [submitMessage, setSubmitMessage] = useState<{
     type: 'success' | 'error';
     message: string;
   } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const defaultValues = useMemo<MemberFormValues>(
+    () => ({
+      ...memberFormDefaultValues,
+      memberCode: String(member?.memberCode ?? id ?? ''),
+      recieptNo: String(member?.recieptNo ?? ''),
+      joinDate: member?.joinDate
+        ? new Date(String(member.joinDate)).toISOString().split('T')[0]
+        : '',
+      memberType: String(member?.memberType ?? 'MEMBER'),
+      status: String(member?.status ?? 'ACTIVE'),
+      name: String(member?.name ?? ''),
+      nameKannada: String(member?.nameKannada ?? ''),
+      careOfName: String(member?.careOfName ?? ''),
+      careOfNameKannada: String(member?.careOfNameKannada ?? ''),
+      mobile: String(member?.mobile ?? ''),
+      gender: String(member?.gender ?? ''),
+      addressLine1: String(member?.addressLine1 ?? ''),
+      addressLine2: String(member?.addressLine2 ?? ''),
+      city: String(member?.city ?? ''),
+      district: String(member?.district ?? ''),
+      addressLine1Kannada: String(member?.addressLine1Kannada ?? ''),
+      addressLine2Kannada: String(member?.addressLine2Kannada ?? ''),
+      cityKannada: String(member?.cityKannada ?? ''),
+      districtKannada: String(member?.districtKannada ?? ''),
+      postalCode: String(member?.postalCode ?? ''),
+    }),
+    [id, member],
+  );
+
   const handleUpdateMember = async (values: MemberFormValues) => {
     setSubmitMessage(null);
     setIsSubmitting(true);
 
     try {
-      console.log('Update member payload', { id, ...values });
+      const response = await updateMember(String(id ?? ''), values);
       setSubmitMessage({
         type: 'success',
-        message: 'Member updated successfully.',
+        message: response.message || 'Member updated successfully.',
       });
     } catch (error) {
       const message =
@@ -59,21 +91,14 @@ export default function EditMember() {
           </Link>
         </div>
 
-        <div className='rounded-xl border border-slate-200 bg-white p-6'>
-          <p className='mb-4 text-sm text-slate-500'>Editing member: {id}</p>
-
-          <MemberForm
-            defaultValues={{
-              ...memberFormDefaultValues,
-              memberCode: id ?? '',
-            }}
-            onSubmit={handleUpdateMember}
-            submitLabel='Update Member'
-            isSubmitting={isSubmitting}
-            submitMessage={submitMessage}
-            cancelTo={ROUTES.ADMIN.MEMBERS}
-          />
-        </div>
+        <MemberForm
+          defaultValues={defaultValues}
+          onSubmit={handleUpdateMember}
+          submitLabel='Update Member'
+          isSubmitting={isSubmitting}
+          submitMessage={submitMessage}
+          cancelTo={ROUTES.ADMIN.MEMBERS}
+        />
       </div>
     </main>
   );

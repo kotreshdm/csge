@@ -36,6 +36,9 @@ export const buildApp = async () => {
 
   await app.register(cors, {
     origin: "http://localhost:5173",
+    methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
   });
 
   await app.register(multipart);

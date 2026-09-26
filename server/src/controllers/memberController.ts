@@ -5,6 +5,7 @@ import { sendSuccess } from "../utils/response.js";
 import {
   createMember,
   getMembers,
+  updateMember,
   uploadMembersFromFile,
 } from "../services/memberService.js";
 
@@ -53,6 +54,15 @@ export const memberController = {
     const member = await createMember(payload);
 
     return sendSuccess(reply, 201, "Member created successfully.", member);
+  },
+
+  updateMember: async (request: FastifyRequest, reply: FastifyReply) => {
+    const params = request.params as { id?: string };
+    const payload = (request.body ?? {}) as Record<string, unknown>;
+
+    const member = await updateMember(String(params.id ?? ""), payload);
+
+    return sendSuccess(reply, 200, "Member updated successfully.", member);
   },
 
   uploadMembers: async (request: FastifyRequest, reply: FastifyReply) => {

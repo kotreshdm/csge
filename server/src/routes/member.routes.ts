@@ -9,5 +9,6 @@ export default async function memberRoutes(app: FastifyInstance) {
 
   app.get("/", memberController.getMembers);
   app.post("/", memberController.createMember);
+  app.put("/:id", memberController.updateMember);
   app.post("/upload", memberController.uploadMembers);
 }

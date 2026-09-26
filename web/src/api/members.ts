@@ -37,6 +37,14 @@ export function createMember(data: CreateMemberPayload) {
   });
 }
 
+export function updateMember(memberId: string, data: CreateMemberPayload) {
+  return api<{ success: boolean; message: string; data?: unknown }>({
+    method: 'PUT',
+    url: `/members/${memberId}`,
+    data,
+  });
+}
+
 export function uploadMembersFile(file: File) {
   const formData = new FormData();
   formData.append('file', file);
