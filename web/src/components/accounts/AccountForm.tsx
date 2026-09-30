@@ -90,7 +90,7 @@ export default function AccountForm({
             <Input
               id='openingBalance'
               type='number'
-              step='0.01'
+              step='100'
               max='9999999999999.99'
               min='-9999999999999.99'
               aria-invalid={Boolean(errors.openingBalance)}
