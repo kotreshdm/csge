@@ -91,7 +91,7 @@ model Party {
   id        BigInt @id @default(autoincrement())
   name      String
   partyType String
-  status    String   @default('active')
+  status    String   @default("active")
 
   mobile  String?
   address String?
@@ -108,4 +108,45 @@ model Party {
   @@index([status])
   @@index([startDate, endDate])
   @@map("parties")
+}
+
+
+model Layout {
+  id           BigInt   @id @default(autoincrement())
+  layoutCode   String   @unique
+  name         String
+  location     String?
+  address      String?
+  surveyNumbers String?
+  developerIds BigInt[]
+  description  String?
+  otherDetails String?
+  status       String   @default("active")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  prices       LayoutPrice[]
+
+
+  @@index([status])
+  @@map("layouts")
+}
+
+
+model LayoutPrice {
+  id           BigInt  @id @default(autoincrement())
+  layoutId     BigInt
+
+  pricePerSqFt Decimal @db.Decimal(12, 2)
+  validFrom    DateTime @db.Date
+  validTo      DateTime? @db.Date
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  layout Layout @relation(fields: [layoutId], references: [id])
+
+  @@index([layoutId, validFrom, validTo])
+  @@map("layout_prices")
 }

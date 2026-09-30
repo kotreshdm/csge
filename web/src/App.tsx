@@ -15,6 +15,9 @@ import type { RootState } from './store';
 import Parties from './pages/parties/Parties';
 import AddParty from './pages/parties/AddParty';
 import EditParty from './pages/parties/EditParty';
+import Layouts from './pages/layouts/Layouts';
+import AddLayout from './pages/layouts/AddLayout';
+import EditLayout from './pages/layouts/EditLayout';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useSelector((state: RootState) => state.auth.isAuthenticated);
@@ -112,6 +115,33 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <EditParty />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path={ROUTES.ADMIN.LAYOUTS}
+            element={
+              <ProtectedRoute>
+                <Layouts />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path={ROUTES.ADMIN.LAYOUTS_ADD}
+            element={
+              <ProtectedRoute>
+                <AddLayout />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path={ROUTES.ADMIN.LAYOUTS_EDIT(':id')}
+            element={
+              <ProtectedRoute>
+                <EditLayout />
               </ProtectedRoute>
             }
           />

@@ -44,6 +44,50 @@ export interface PartyPayload {
   endDate: string;
 }
 
+export interface LayoutPrice {
+  id: string;
+  layoutId: string;
+  pricePerSqFt: string;
+  validFrom: string;
+  validTo: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Layout {
+  id: string;
+  layoutCode: string;
+  name: string;
+  location: string | null;
+  address: string | null;
+  surveyNumbers: string | null;
+  developerIds: string[];
+  description: string | null;
+  otherDetails: string | null;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+  prices: LayoutPrice[];
+}
+
+export interface LayoutPayload {
+  layoutCode: string;
+  name: string;
+  location: string;
+  address: string;
+  surveyNumbers: string;
+  developerIds: string[];
+  description: string;
+  otherDetails: string;
+  status: string;
+}
+
+export interface LayoutPricePayload {
+  pricePerSqFt: string;
+  validFrom: string;
+  validTo: string;
+}
+
 export interface PaginatedMembersResponse {
   items: Array<{
     memberId: string;

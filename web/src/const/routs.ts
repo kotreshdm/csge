@@ -12,6 +12,10 @@ export const ROUTES = {
     PARTIES: '/admin/parties',
     PARTIES_ADD: '/admin/parties/add',
     PARTIES_EDIT: (partyId: string) => `/admin/parties/${partyId}/edit`,
+
+    LAYOUTS: '/admin/layouts',
+    LAYOUTS_ADD: '/admin/layouts/add',
+    LAYOUTS_EDIT: (layoutId: string) => `/admin/layouts/${layoutId}/edit`,
   },
 } as const;
 
