@@ -86,3 +86,26 @@ enum Gender {
   FEMALE
   OTHER
 }
+
+model Party {
+  id        BigInt @id @default(autoincrement())
+  name      String
+  partyType String
+  status    String   @default('active')
+
+  mobile  String?
+  address String?
+  details String?
+
+  startDate DateTime  @db.Date
+  endDate   DateTime? @db.Date
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([name, partyType])
+  @@index([partyType])
+  @@index([status])
+  @@index([startDate, endDate])
+  @@map("parties")
+}

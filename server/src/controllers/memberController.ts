@@ -25,11 +25,9 @@ export const memberController = {
 
     const gender = typeof query.gender === "string" ? query.gender : "";
 
-    // NEW
     const sortBy =
       typeof query.sortBy === "string" ? query.sortBy : "memberCode";
 
-    // NEW
     const sortOrder = query.sortOrder === "desc" ? "desc" : "asc";
 
     const result = await getMembers({
@@ -39,8 +37,6 @@ export const memberController = {
       memberType,
       status,
       gender,
-
-      // NEW
       sortBy,
       sortOrder,
     });

@@ -17,6 +17,11 @@ import {
 } from "../constants/memberMaps.js";
 import { AppError } from "../utils/AppError.js";
 import { getValue, parseDateValue } from "../utils/memberImportHelpers.js";
+import {
+  optionalDate,
+  requiredDate,
+  requiredString,
+} from "../utils/validation.js";
 
 export interface UploadedMemberRow {
   row: number;
@@ -167,16 +172,6 @@ function normalizeMemberRow(record: Record<string, unknown>) {
     permanentAddress: getValue(record, "permanentAddress"),
     officeAddress: getValue(record, "officeAddress"),
   };
-}
-
-function expectRequiredString(value: unknown, fieldName: string): string {
-  const trimmed = String(value ?? "").trim();
-
-  if (!trimmed) {
-    throw new AppError(400, `${fieldName} is required.`);
-  }
-
-  return trimmed;
 }
 
 function expectMaxLength(value: unknown, fieldName: string, maxLength: number) {
@@ -385,29 +380,31 @@ export async function getMembers(params?: {
 }
 
 export async function createMember(input: Record<string, unknown>) {
-  const memberCode = expectRequiredString(input.memberCode, "Member code");
-  const recieptNo = expectRequiredString(input.recieptNo, "Receipt number");
-  const joinDate = parseDateValue(input.joinDate);
-  const name = expectRequiredString(input.name, "Member name");
-  const nameKannada = expectRequiredString(
-    input.nameKannada,
+  const memberCode = requiredString(
+    String(input.memberCode ?? ""),
+    "Member code",
+  );
+  const recieptNo = requiredString(
+    String(input.recieptNo ?? ""),
+    "Receipt number",
+  );
+  const joinDate = requiredDate(input.joinDate, "Join date");
+  const name = requiredString(String(input.name ?? ""), "Member name");
+  const nameKannada = requiredString(
+    String(input.nameKannada ?? ""),
     "Name in Kannada",
   );
-  const mobile = expectRequiredString(input.mobile, "Mobile number");
-  const addressLine1 = expectRequiredString(
-    input.addressLine1,
+  const mobile = requiredString(String(input.mobile ?? ""), "Mobile number");
+  const addressLine1 = requiredString(
+    String(input.addressLine1 ?? ""),
     "Address line 1",
   );
-  const addressLine2 = expectRequiredString(
-    input.addressLine2,
+  const addressLine2 = requiredString(
+    String(input.addressLine2 ?? ""),
     "Address line 2",
   );
-  const city = expectRequiredString(input.city, "City");
-  const district = expectRequiredString(input.district, "District");
-
-  if (!joinDate) {
-    throw new AppError(400, "Join date is required.");
-  }
+  const city = requiredString(String(input.city ?? ""), "City");
+  const district = requiredString(String(input.district ?? ""), "District");
 
   validateMaxLengths(input);
 
@@ -439,8 +436,11 @@ export async function createMember(input: Record<string, unknown>) {
   const memberType = normalizeMemberType(String(input.memberType ?? "MEMBER"));
   const status = normalizeMemberStatus(String(input.status ?? "ACTIVE"));
   const gender = normalizeGender(String(input.gender ?? ""));
-  const dob = parseDateValue(input.dob);
-  const nomineeDateOfBirth = parseDateValue(input.nomineeDateOfBirth);
+  const dob = optionalDate(input.dob, "Date of birth");
+  const nomineeDateOfBirth = optionalDate(
+    input.nomineeDateOfBirth,
+    "Nominee date of birth",
+  );
 
   const createdMember = await prisma.member.create({
     data: {
@@ -511,29 +511,31 @@ export async function updateMember(
     throw new AppError(404, "Member not found.");
   }
 
-  const memberCode = expectRequiredString(input.memberCode, "Member code");
-  const recieptNo = expectRequiredString(input.recieptNo, "Receipt number");
-  const joinDate = parseDateValue(input.joinDate);
-  const name = expectRequiredString(input.name, "Member name");
-  const nameKannada = expectRequiredString(
-    input.nameKannada,
+  const memberCode = requiredString(
+    String(input.memberCode ?? ""),
+    "Member code",
+  );
+  const recieptNo = requiredString(
+    String(input.recieptNo ?? ""),
+    "Receipt number",
+  );
+  const joinDate = requiredDate(input.joinDate, "Join date");
+  const name = requiredString(String(input.name ?? ""), "Member name");
+  const nameKannada = requiredString(
+    String(input.nameKannada ?? ""),
     "Name in Kannada",
   );
-  const mobile = expectRequiredString(input.mobile, "Mobile number");
-  const addressLine1 = expectRequiredString(
-    input.addressLine1,
+  const mobile = requiredString(String(input.mobile ?? ""), "Mobile number");
+  const addressLine1 = requiredString(
+    String(input.addressLine1 ?? ""),
     "Address line 1",
   );
-  const addressLine2 = expectRequiredString(
-    input.addressLine2,
+  const addressLine2 = requiredString(
+    String(input.addressLine2 ?? ""),
     "Address line 2",
   );
-  const city = expectRequiredString(input.city, "City");
-  const district = expectRequiredString(input.district, "District");
-
-  if (!joinDate) {
-    throw new AppError(400, "Join date is required.");
-  }
+  const city = requiredString(String(input.city ?? ""), "City");
+  const district = requiredString(String(input.district ?? ""), "District");
 
   validateMaxLengths(input);
 
@@ -568,8 +570,11 @@ export async function updateMember(
   const memberType = normalizeMemberType(String(input.memberType ?? "MEMBER"));
   const status = normalizeMemberStatus(String(input.status ?? "ACTIVE"));
   const gender = normalizeGender(String(input.gender ?? ""));
-  const dob = parseDateValue(input.dob);
-  const nomineeDateOfBirth = parseDateValue(input.nomineeDateOfBirth);
+  const dob = optionalDate(input.dob, "Date of birth");
+  const nomineeDateOfBirth = optionalDate(
+    input.nomineeDateOfBirth,
+    "Nominee date of birth",
+  );
 
   const updatedMember = await prisma.member.update({
     where: { memberId: existingMember.memberId },

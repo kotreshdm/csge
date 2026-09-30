@@ -11,6 +11,39 @@ export interface MemberQueryParams {
   sortOrder?: 'asc' | 'desc';
 }
 
+export interface Party {
+  id: string;
+  name: string;
+  partyType: string;
+  status: string;
+  mobile: string | null;
+  address: string | null;
+  details: string | null;
+  startDate: string;
+  endDate: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PartiesResponse {
+  success: boolean;
+  message: string;
+  data: {
+    items: Party[];
+  };
+}
+
+export interface PartyPayload {
+  name: string;
+  partyType: string;
+  status: string;
+  mobile: string;
+  address: string;
+  details: string;
+  startDate: string;
+  endDate: string;
+}
+
 export interface PaginatedMembersResponse {
   items: Array<{
     memberId: string;

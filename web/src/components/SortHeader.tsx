@@ -1,12 +1,18 @@
-import type { SortHeaderProps } from './types';
+type SortHeaderProps<Field extends string> = {
+  label: string;
+  field: Field;
+  sortBy: Field;
+  sortOrder: 'asc' | 'desc';
+  onSort: (field: Field) => void;
+};
 
-export function SortHeader({
+export function SortHeader<Field extends string>({
   label,
   field,
   sortBy,
   sortOrder,
   onSort,
-}: SortHeaderProps) {
+}: SortHeaderProps<Field>) {
   const active = sortBy === field;
 
   return (

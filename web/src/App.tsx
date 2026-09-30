@@ -1,30 +1,29 @@
-import { Navigate, Route, Routes } from "react-router-dom";
-import { useSelector } from "react-redux";
+import { Navigate, Route, Routes } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 
-import { Toaster } from "@/components/ui/sonner";
-import Header from "./components/layout/Header";
-import Footer from "./components/layout/Footer";
-import { ROUTES } from "./const/routs";
-import AdminDashboard from "./pages/AdminDashboard";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import Members from "./pages/members/Members";
-import AddMember from "./pages/members/AddMember";
-import EditMember from "./pages/members/EditMember";
-import type { RootState } from "./store";
+import { Toaster } from '@/components/ui/sonner';
+import Header from './components/layout/Header';
+import Footer from './components/layout/Footer';
+import { ROUTES } from './const/routs';
+import AdminDashboard from './pages/AdminDashboard';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import Members from './pages/members/Members';
+import AddMember from './pages/members/AddMember';
+import EditMember from './pages/members/EditMember';
+import type { RootState } from './store';
+import Parties from './pages/parties/Parties';
+import AddParty from './pages/parties/AddParty';
+import EditParty from './pages/parties/EditParty';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const isAuthenticated = useSelector(
-    (state: RootState) => state.auth.isAuthenticated,
-  );
+  const isAuthenticated = useSelector((state: RootState) => state.auth.isAuthenticated);
 
   return isAuthenticated ? children : <Navigate to={ROUTES.ADMIN.LOGIN} replace />;
 }
 
 function RedirectIfAuthenticated({ children }: { children: React.ReactNode }) {
-  const isAuthenticated = useSelector(
-    (state: RootState) => state.auth.isAuthenticated,
-  );
+  const isAuthenticated = useSelector((state: RootState) => state.auth.isAuthenticated);
 
   return isAuthenticated ? <Navigate to={ROUTES.ADMIN.ROOT} replace /> : children;
 }
@@ -82,7 +81,7 @@ export default function App() {
           />
 
           <Route
-            path={ROUTES.ADMIN.MEMBERS_EDIT(":id")}
+            path={ROUTES.ADMIN.MEMBERS_EDIT(':id')}
             element={
               <ProtectedRoute>
                 <EditMember />
@@ -91,9 +90,33 @@ export default function App() {
           />
 
           <Route
-            path={ROUTES.ROOT}
-            element={<Navigate to={ROUTES.ADMIN.LOGIN} replace />}
+            path={ROUTES.ADMIN.PARTIES}
+            element={
+              <ProtectedRoute>
+                <Parties />
+              </ProtectedRoute>
+            }
           />
+
+          <Route
+            path={ROUTES.ADMIN.PARTIES_ADD}
+            element={
+              <ProtectedRoute>
+                <AddParty />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path={ROUTES.ADMIN.PARTIES_EDIT(':id')}
+            element={
+              <ProtectedRoute>
+                <EditParty />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route path={ROUTES.ROOT} element={<Navigate to={ROUTES.ADMIN.LOGIN} replace />} />
           <Route path='*' element={<Navigate to={ROUTES.ADMIN.LOGIN} replace />} />
         </Routes>
       </main>

@@ -9,8 +9,7 @@ import { Button } from '@/components/ui/button';
 import { getMembers } from '../../api/members';
 import { memberGenderOptions, memberStatusOptions, memberTypeOptions } from './filterOptions';
 import { highlightText } from './helpers';
-
-import { SortHeader } from './SortHeader';
+import { SortHeader } from '../../components/SortHeader';
 import type { SortField, SortOrder } from './types';
 import { PageToolbar } from '../../components/PageToolbar';
 
