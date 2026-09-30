@@ -72,6 +72,14 @@ function Header() {
               >
                 Layouts
               </NavLink>
+              <NavLink
+                to={ROUTES.ADMIN.ACCOUNTS}
+                className={({ isActive }) =>
+                  `rounded-md px-3 py-2 text-sm font-medium transition-colors ${isActive ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`
+                }
+              >
+                Accounts
+              </NavLink>
             </nav>
             {user?.name && <span className='text-sm text-muted-foreground'>{user.name}</span>}
             <button

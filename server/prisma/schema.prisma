@@ -150,3 +150,24 @@ model LayoutPrice {
   @@index([layoutId, validFrom, validTo])
   @@map("layout_prices")
 }
+
+model Account {
+  id             BigInt  @id @default(autoincrement())
+  accountCode    String  @unique
+  name           String
+  accountType    String
+
+  accountNumber  String?
+  bankName       String?
+
+  openingBalance Decimal @default(0) @db.Decimal(15, 2)
+
+  isActive       Boolean @default(true)
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([accountType])
+  @@index([isActive])
+  @@map("accounts")
+}

@@ -88,6 +88,29 @@ export interface LayoutPricePayload {
   validTo: string;
 }
 
+export interface Account {
+  id: string;
+  accountCode: string;
+  name: string;
+  accountType: string;
+  accountNumber: string | null;
+  bankName: string | null;
+  openingBalance: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AccountPayload {
+  accountCode: string;
+  name: string;
+  accountType: string;
+  accountNumber: string;
+  bankName: string;
+  openingBalance: string;
+  isActive: boolean;
+}
+
 export interface PaginatedMembersResponse {
   items: Array<{
     memberId: string;

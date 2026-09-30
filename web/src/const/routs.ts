@@ -16,6 +16,10 @@ export const ROUTES = {
     LAYOUTS: '/admin/layouts',
     LAYOUTS_ADD: '/admin/layouts/add',
     LAYOUTS_EDIT: (layoutId: string) => `/admin/layouts/${layoutId}/edit`,
+
+    ACCOUNTS: '/admin/accounts',
+    ACCOUNTS_ADD: '/admin/accounts/add',
+    ACCOUNTS_EDIT: (accountId: string) => `/admin/accounts/${accountId}/edit`,
   },
 } as const;
 
