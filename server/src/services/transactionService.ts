@@ -130,16 +130,6 @@ function transactionData(input: TransactionInput) {
   const type = enumValue<TransactionType>(input.type, "Type", transactionTypes);
   const shareAmount = amount(input.shareAmount, "Share amount", 10);
   const shareFeeAmount = amount(input.shareFeeAmount, "Share fee amount", 10);
-  const applicationFeeAmount = amount(
-    input.applicationFeeAmount,
-    "Application fee amount",
-    10,
-  );
-  const admissionFeeAmount = amount(
-    input.admissionFeeAmount,
-    "Admission fee amount",
-    10,
-  );
   const membershipFeeAmount = amount(
     input.membershipFeeAmount,
     "Membership fee amount",
@@ -169,8 +159,6 @@ function transactionData(input: TransactionInput) {
     [
       shareAmount,
       shareFeeAmount,
-      applicationFeeAmount,
-      admissionFeeAmount,
       membershipFeeAmount,
       siteDepositAmount,
       welfareFundAmount,
@@ -201,8 +189,6 @@ function transactionData(input: TransactionInput) {
     toLayoutId: parseId(input.toLayoutId, "Destination layout ID"),
     shareAmount,
     shareFeeAmount,
-    applicationFeeAmount,
-    admissionFeeAmount,
     membershipFeeAmount,
     siteDepositAmount,
     welfareFundAmount,
@@ -252,8 +238,6 @@ function serializeTransaction(transaction: TransactionRecord) {
     updatedBy: transaction.updatedBy?.toString() ?? null,
     shareAmount: transaction.shareAmount.toString(),
     shareFeeAmount: transaction.shareFeeAmount.toString(),
-    applicationFeeAmount: transaction.applicationFeeAmount.toString(),
-    admissionFeeAmount: transaction.admissionFeeAmount.toString(),
     membershipFeeAmount: transaction.membershipFeeAmount.toString(),
     siteDepositAmount: transaction.siteDepositAmount.toString(),
     welfareFundAmount: transaction.welfareFundAmount.toString(),

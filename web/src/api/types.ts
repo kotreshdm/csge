@@ -126,8 +126,6 @@ export interface Transaction {
   toLayoutId: string | null;
   shareAmount: string;
   shareFeeAmount: string;
-  applicationFeeAmount: string;
-  admissionFeeAmount: string;
   membershipFeeAmount: string;
   siteDepositAmount: string;
   welfareFundAmount: string;

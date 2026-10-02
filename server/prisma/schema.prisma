@@ -323,8 +323,6 @@ model Transaction {
 
   shareAmount           Decimal @default(0) @db.Decimal(10, 2)
   shareFeeAmount        Decimal @default(0) @db.Decimal(10, 2)
-  applicationFeeAmount  Decimal @default(0) @db.Decimal(10, 2)
-  admissionFeeAmount    Decimal @default(0) @db.Decimal(10, 2)
   membershipFeeAmount   Decimal @default(0) @db.Decimal(10, 2)
   siteDepositAmount     Decimal @default(0) @db.Decimal(10, 2)
   welfareFundAmount     Decimal @default(0) @db.Decimal(10, 2)
