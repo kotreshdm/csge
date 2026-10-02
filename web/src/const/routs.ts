@@ -22,6 +22,8 @@ export const ROUTES = {
     ACCOUNTS_EDIT: (accountId: string) => `/admin/accounts/${accountId}/edit`,
 
     TRANSACTIONS: '/admin/transactions',
+    TRANSACTIONS_ADD: '/admin/transactions/add',
+    TRANSACTIONS_EDIT: (transactionId: string) => `/admin/transactions/${transactionId}/edit`,
   },
 } as const;
 

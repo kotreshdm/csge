@@ -6,7 +6,7 @@ export const requireAuth = async (
 ) => {
   try {
     // NOTE: Auth is intentionally disabled locally; enable this in production.
-    //await request.jwtVerify();
+    await request.jwtVerify();
   } catch {
     return reply.code(401).send({
       success: false,

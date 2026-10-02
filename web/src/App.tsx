@@ -21,7 +21,9 @@ import EditLayout from './pages/layouts/EditLayout';
 import Accounts from './pages/accounts/Accounts';
 import AddAccount from './pages/accounts/AddAccount';
 import EditAccount from './pages/accounts/EditAccount';
-import Transactions from './pages/transactions/Transactions';
+import Transactions from './pages/transactions/TransactionsList';
+import AddTransaction from './pages/transactions/AddTransaction';
+import EditTransaction from './pages/transactions/EditTransaction';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useSelector((state: RootState) => state.auth.isAuthenticated);
@@ -182,6 +184,24 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <Transactions />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path={ROUTES.ADMIN.TRANSACTIONS_ADD}
+            element={
+              <ProtectedRoute>
+                <AddTransaction />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path={ROUTES.ADMIN.TRANSACTIONS_EDIT(':id')}
+            element={
+              <ProtectedRoute>
+                <EditTransaction />
               </ProtectedRoute>
             }
           />
