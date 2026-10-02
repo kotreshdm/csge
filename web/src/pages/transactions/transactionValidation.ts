@@ -47,7 +47,7 @@ export function validateTransaction(form: TransactionPayload): ValidationErrors 
 
   if (!isSubtypeRequired(form.type) && form.subType) {
     if (form.type !== 'BANK' && form.type !== 'SHARE' && form.type !== 'LAYOUT') {
-      const allowed = getSubtypeOptions(form.type);
+      const allowed = getSubtypeOptions(form.type, form.direction);
       if (allowed.length && !allowed.includes(form.subType)) {
         errors.subType = 'Invalid sub-type for this transaction type.';
       }

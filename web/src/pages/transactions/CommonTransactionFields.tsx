@@ -1,6 +1,11 @@
 import type { ReactNode } from 'react';
 import type { TransactionPayload } from '../../api/types';
-import { getAllowedDirections, getAllowedTypes, getSubtypeOptions, inputValue } from './transactionRules';
+import {
+  getAllowedDirections,
+  getAllowedTypes,
+  getSubtypeOptions,
+  inputValue,
+} from './transactionRules';
 
 interface CommonTransactionFieldsProps {
   form: TransactionPayload;
@@ -38,7 +43,7 @@ export function CommonTransactionFields({
   onDirectionChange,
   onTypeChange,
 }: CommonTransactionFieldsProps) {
-  const subtypeOptions = getSubtypeOptions(form.type);
+  const subtypeOptions = getSubtypeOptions(form.type, form.direction);
   const allowedDirections = getAllowedDirections(form.type);
   const allowedTypes = getAllowedTypes(form.direction);
 
@@ -104,7 +109,9 @@ export function CommonTransactionFields({
             onChange={event => onTypeChange(event.target.value as TransactionPayload['type'])}
             className='h-9 min-w-0 rounded-md border border-slate-300 bg-white px-2.5 font-normal text-slate-900 outline-none focus:border-teal-700 focus:ring-2 focus:ring-teal-700/15'
           >
-            {(['SHARE', 'LAYOUT', 'BANK', 'EXPENSE', 'INCOME', 'ADVANCE', 'ASSET', 'OTHER'] as const)
+            {(
+              ['SHARE', 'LAYOUT', 'BANK', 'EXPENSE', 'INCOME', 'ADVANCE', 'ASSET', 'OTHER'] as const
+            )
               .filter(type => allowedTypes.includes(type))
               .map(type => (
                 <option key={type} value={type}>

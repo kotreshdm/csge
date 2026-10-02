@@ -1,5 +1,6 @@
 import type { TransactionPayload } from '../../api/types';
 import {
+  ADVANCE_SUBTYPES_BY_DIRECTION,
   PARTY_TYPE_MATCHERS,
   PAYMENT_MODES,
   REQUIRED_MEMBER_TYPES,
@@ -69,8 +70,19 @@ export function getAllowedTypes(direction: string): readonly TransactionPayload[
     TRANSACTION_TYPES) as readonly TransactionPayload['type'][];
 }
 
-export function getSubtypeOptions(type: string) {
-  return TRANSACTION_SUBTYPES[type] ?? [];
+export function getSubtypeOptions(type: string, direction?: TransactionPayload['direction']) {
+  const options = TRANSACTION_SUBTYPES[type] ?? [];
+
+  if (type !== 'ADVANCE' || !direction) {
+    return options;
+  }
+
+  if (direction !== 'IN' && direction !== 'OUT') {
+    return options;
+  }
+
+  const allowed = ADVANCE_SUBTYPES_BY_DIRECTION[direction] ?? [];
+  return options.filter(option => allowed.some(allowedOption => allowedOption === option));
 }
 
 export function isSubtypeRequired(type: string) {
@@ -113,8 +125,25 @@ export function getFilteredParties(
       return PARTY_TYPE_MATCHERS.EXPENSE_FURNITURE;
     if (form.type === 'ADVANCE' && form.subType === 'DIRECTOR_ADVANCE')
       return PARTY_TYPE_MATCHERS.ADVANCE_DIRECTOR_ADVANCE;
+    if (form.type === 'ADVANCE' && form.subType === 'DIRECTOR_ADVANCE_RETURN')
+      return PARTY_TYPE_MATCHERS.ADVANCE_DIRECTOR_ADVANCE;
     if (form.type === 'ADVANCE' && form.subType === 'DEVELOPER_ADVANCE')
       return PARTY_TYPE_MATCHERS.ADVANCE_DEVELOPER_ADVANCE;
+    if (form.type === 'ADVANCE' && form.subType === 'DEVELOPER_ADVANCE_RETURN')
+      return PARTY_TYPE_MATCHERS.ADVANCE_DEVELOPER_ADVANCE;
+    if (form.type === 'ADVANCE' && form.subType === 'PRESIDENT_ADVANCE')
+      return PARTY_TYPE_MATCHERS.ADVANCE_DIRECTOR_ADVANCE;
+    if (form.type === 'ADVANCE' && form.subType === 'PRESIDENT_ADVANCE_RETURN')
+      return PARTY_TYPE_MATCHERS.ADVANCE_DIRECTOR_ADVANCE;
+    if (form.type === 'ADVANCE' && form.subType === 'SECRETARY_ADVANCE')
+      return PARTY_TYPE_MATCHERS.ADVANCE_DIRECTOR_ADVANCE;
+    if (form.type === 'ADVANCE' && form.subType === 'SECRETARY_ADVANCE_RETURN')
+      return PARTY_TYPE_MATCHERS.ADVANCE_DIRECTOR_ADVANCE;
+    if (
+      form.type === 'ADVANCE' &&
+      (form.subType === 'OTHER_ADVANCE' || form.subType === 'OTHER_ADVANCE_RETURN')
+    )
+      return PARTY_TYPE_MATCHERS.ADVANCE_OTHER;
     if (form.type === 'ASSET' && form.subType === 'BUILDING_ADVANCE')
       return PARTY_TYPE_MATCHERS.ASSET_BUILDING_ADVANCE;
     if (form.type === 'ASSET' && form.subType === 'FURNITURE')
@@ -281,7 +310,7 @@ export function normalizeTransaction(form: TransactionPayload): TransactionPaylo
     next.subType = '';
   } else if (!isSubtypeRequired(next.type)) {
     next.subType = '';
-  } else if (!getSubtypeOptions(next.type).includes(next.subType)) {
+  } else if (!getSubtypeOptions(next.type, next.direction).includes(next.subType)) {
     next.subType = '';
   }
 
