@@ -4,6 +4,7 @@ import { ROUTES } from "../const/routs";
 import AdminDashboard from "../pages/AdminDashboard";
 import Login from "../pages/Login";
 import Register from "../pages/Register";
+import Transactions from "../pages/transactions/Transactions";
 import type { JSX } from "react/jsx-runtime";
 
 function hasAccessToken() {
@@ -34,6 +35,15 @@ export default function AppRoutes() {
         element={
           <ProtectedRoute>
             <AdminDashboard />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path={ROUTES.ADMIN.TRANSACTIONS}
+        element={
+          <ProtectedRoute>
+            <Transactions />
           </ProtectedRoute>
         }
       />

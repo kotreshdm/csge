@@ -111,6 +111,54 @@ export interface AccountPayload {
   isActive: boolean;
 }
 
+export interface Transaction {
+  id: string;
+  cashbookNo: number | null;
+  cashbookPage: number | null;
+  transactionDate: string;
+  direction: 'IN' | 'OUT' | 'TRANSFER';
+  type: 'SHARE' | 'LAYOUT' | 'BANK' | 'EXPENSE' | 'INCOME' | 'ADVANCE' | 'ASSET' | 'OTHER';
+  subType: string;
+  memberId: string | null;
+  partyId: string | null;
+  layoutId: string | null;
+  fromLayoutId: string | null;
+  toLayoutId: string | null;
+  shareAmount: string;
+  shareFeeAmount: string;
+  applicationFeeAmount: string;
+  admissionFeeAmount: string;
+  membershipFeeAmount: string;
+  siteDepositAmount: string;
+  welfareFundAmount: string;
+  booksFormsAmount: string;
+  miscellaneousAmount: string;
+  otherAmount: string;
+  totalAmount: string;
+  fromAccountId: string | null;
+  toAccountId: string | null;
+  receiptNo: string | null;
+  paymentMode: 'CASH' | 'CHEQUE' | 'BANK_TRANSFER' | 'UPI' | 'OTHER' | null;
+  chequeNo: string | null;
+  chequeDate: string | null;
+  bankReferenceNo: string | null;
+  referenceTransactionId: string | null;
+  description: string | null;
+  remarks: string | null;
+  createdBy: string;
+  updatedBy: string | null;
+}
+
+export type TransactionPayload = Omit<
+  Transaction,
+  'id' | 'createdBy' | 'updatedBy' | 'cashbookNo' | 'cashbookPage'
+> & {
+  cashbookNo: number | string | null;
+  cashbookPage: number | string | null;
+  createdBy?: string;
+  updatedBy?: string | null;
+};
+
 export interface PaginatedMembersResponse {
   items: Array<{
     memberId: string;

@@ -20,6 +20,8 @@ export const ROUTES = {
     ACCOUNTS: '/admin/accounts',
     ACCOUNTS_ADD: '/admin/accounts/add',
     ACCOUNTS_EDIT: (accountId: string) => `/admin/accounts/${accountId}/edit`,
+
+    TRANSACTIONS: '/admin/transactions',
   },
 } as const;
 

@@ -22,8 +22,8 @@ export default function Members() {
   const [gender, setGender] = useState('');
   const [showKannada, setShowKannada] = useState(false);
 
-  const [sortBy, setSortBy] = useState<SortField>('memberCode');
-  const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
+  const [sortBy, setSortBy] = useState<SortField>('joinDate');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
 
   const filters = useMemo(
     () => ({
@@ -60,6 +60,9 @@ export default function Members() {
     setMemberType('');
     setStatus('');
     setGender('');
+    setShowKannada(false);
+    setSortBy('joinDate');
+    setSortOrder('desc');
   };
   const handleSort = (field: SortField) => {
     setPage(1);
