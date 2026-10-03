@@ -11,10 +11,16 @@ import {
   optionalDate,
   optionalString,
   requiredDate,
-  requiredString,
 } from "../utils/validation.js";
 
 type TransactionInput = Record<string, unknown>;
+
+function formatLocalDateInput(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
 
 const directions = ["IN", "OUT", "TRANSFER"] as const;
 const transactionTypes = [
@@ -175,13 +181,41 @@ function transactionData(input: TransactionInput) {
     15,
   );
 
+  const subType = optionalString(input.subType, "Sub-type") ?? "";
+  if (
+    ["EXPENSE", "INCOME", "ADVANCE", "ASSET", "OTHER"].includes(type) &&
+    !subType
+  ) {
+    throw new AppError(400, "Sub-type is required.");
+  }
+
+  const fromAccountId =
+    type === "BANK" ? parseId(input.fromAccountId, "Source account ID") : null;
+  const toAccountId =
+    type === "BANK"
+      ? parseId(input.toAccountId, "Destination account ID")
+      : null;
+  if (type === "BANK" && direction !== "IN" && fromAccountId === null) {
+    throw new AppError(400, "Source account is required for outgoing bank transactions.");
+  }
+  if (type === "BANK" && direction !== "OUT" && toAccountId === null) {
+    throw new AppError(400, "Destination account is required for incoming bank transactions.");
+  }
+  if (
+    type === "BANK" &&
+    direction === "TRANSFER" &&
+    fromAccountId === toAccountId
+  ) {
+    throw new AppError(400, "Source and destination accounts must be different.");
+  }
+
   return {
     cashbookNo: optionalInt(input.cashbookNo, "Cashbook number"),
     cashbookPage: optionalInt(input.cashbookPage, "Cashbook page"),
     transactionDate: requiredDate(input.transactionDate, "Transaction date"),
     direction,
     type,
-    subType: requiredString(input.subType, "Sub-type"),
+    subType,
     memberId: parseId(input.memberId, "Member ID"),
     partyId: parseId(input.partyId, "Party ID"),
     layoutId: parseId(input.layoutId, "Layout ID"),
@@ -196,8 +230,8 @@ function transactionData(input: TransactionInput) {
     miscellaneousAmount,
     otherAmount,
     totalAmount,
-    fromAccountId: parseId(input.fromAccountId, "Source account ID"),
-    toAccountId: parseId(input.toAccountId, "Destination account ID"),
+    fromAccountId,
+    toAccountId,
     receiptNo: optionalString(input.receiptNo, "Receipt number"),
     paymentMode: optionalEnum<PaymentMode>(
       input.paymentMode,
@@ -224,6 +258,10 @@ type TransactionRecord = Prisma.TransactionGetPayload<Record<string, never>>;
 function serializeTransaction(transaction: TransactionRecord) {
   return {
     ...transaction,
+    transactionDate: formatLocalDateInput(transaction.transactionDate),
+    chequeDate: transaction.chequeDate
+      ? formatLocalDateInput(transaction.chequeDate)
+      : null,
     id: transaction.id.toString(),
     memberId: transaction.memberId?.toString() ?? null,
     partyId: transaction.partyId?.toString() ?? null,

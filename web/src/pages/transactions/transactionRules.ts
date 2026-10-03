@@ -22,11 +22,18 @@ export function inputValue(value: string | number | null | undefined) {
   return value === null || value === undefined ? '' : String(value);
 }
 
+export function getLocalDateInputValue(date: Date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 export function blankTransaction(memberId = ''): TransactionPayload {
   return {
     cashbookNo: '',
     cashbookPage: '',
-    transactionDate: new Date().toISOString().slice(0, 10),
+    transactionDate: getLocalDateInputValue(),
     direction: 'IN',
     type: 'SHARE',
     subType: '',
@@ -268,6 +275,12 @@ function normalizePaymentFields(next: TransactionPayload) {
 }
 
 function normalizeAccountFields(next: TransactionPayload) {
+  if (next.type !== 'BANK') {
+    next.fromAccountId = null;
+    next.toAccountId = null;
+    return;
+  }
+
   if (next.direction === 'IN') {
     next.fromAccountId = null;
   }
@@ -318,9 +331,15 @@ function normalizeMemberAndPartyFields(next: TransactionPayload) {
 }
 
 export function normalizeTransaction(form: TransactionPayload): TransactionPayload {
+  const normalizedDate =
+    typeof form.transactionDate === 'string' && form.transactionDate.length >= 10
+      ? form.transactionDate.slice(0, 10)
+      : getLocalDateInputValue();
+
   const next: TransactionPayload = {
     ...blankTransaction(),
     ...form,
+    transactionDate: normalizedDate,
   };
 
   if (!TRANSACTION_TYPES.includes(next.type as (typeof TRANSACTION_TYPES)[number])) {
@@ -459,8 +478,10 @@ export function buildTransactionPayload(
       ? next.otherAmount
       : '0',
     totalAmount: calculateTotalAmount(next),
-    fromAccountId: next.direction === 'IN' ? null : next.fromAccountId || null,
-    toAccountId: next.direction === 'OUT' ? null : next.toAccountId || null,
+    fromAccountId:
+      next.type === 'BANK' && next.direction !== 'IN' ? next.fromAccountId || null : null,
+    toAccountId:
+      next.type === 'BANK' && next.direction !== 'OUT' ? next.toAccountId || null : null,
     receiptNo:
       next.type === 'LAYOUT' && next.direction === 'TRANSFER' ? null : next.receiptNo || null,
     paymentMode:

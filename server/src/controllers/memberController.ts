@@ -3,6 +3,10 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 import { AppError } from "../utils/AppError.js";
 import { sendSuccess } from "../utils/response.js";
 import {
+  getMemberCurrentBalances,
+  getMemberTransactionReport,
+} from "../services/dashboardService.js";
+import {
   createMember,
   getMemberAddressHistory,
   getMembers,
@@ -11,13 +15,38 @@ import {
 } from "../services/memberService.js";
 
 export const memberController = {
-  getAddressHistory: async (_request: FastifyRequest, reply: FastifyReply) =>
-    sendSuccess(
+  getBalances: async (request: FastifyRequest, reply: FastifyReply) => {
+    const query = request.query as { memberIds?: string };
+    const memberIds = query.memberIds?.split(",").filter(Boolean) ?? [];
+    return sendSuccess(reply, 200, "Member balances fetched successfully.", {
+      items: await getMemberCurrentBalances(memberIds),
+    });
+  },
+
+  getTransactions: async (request: FastifyRequest, reply: FastifyReply) => {
+    const params = request.params as { id?: string };
+    const query = request.query as Record<string, unknown>;
+    const financialYear =
+      typeof query.financialYear === "string" ? query.financialYear : "";
+    const sortOrder = query.sortOrder === "asc" ? "asc" : "desc";
+    return sendSuccess(
       reply,
       200,
-      "Member address history fetched successfully.",
-      { items: await getMemberAddressHistory() },
-    ),
+      "Member transactions fetched successfully.",
+      await getMemberTransactionReport(String(params.id ?? ""), {
+        financialYear,
+        page: Number(query.page ?? 1),
+        limit: Number(query.limit ?? 20),
+        sortOrder,
+        search: typeof query.search === "string" ? query.search : undefined,
+      }),
+    );
+  },
+
+  getAddressHistory: async (_request: FastifyRequest, reply: FastifyReply) =>
+    sendSuccess(reply, 200, "Member address history fetched successfully.", {
+      items: await getMemberAddressHistory(),
+    }),
 
   getMembers: async (request: FastifyRequest, reply: FastifyReply) => {
     const query = (request.query ?? {}) as Record<string, unknown>;

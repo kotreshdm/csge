@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft } from 'lucide-react';
@@ -97,6 +97,7 @@ export default function TransactionFormPage({ mode }: TransactionFormPageProps) 
   const [form, setForm] = useState<TransactionPayload>(() =>
     blankTransaction(user?.memberId ?? ''),
   );
+  const hasSelectedTransactionDate = useRef(false);
   const [isSaving, setIsSaving] = useState(false);
 
   const {
@@ -191,6 +192,9 @@ export default function TransactionFormPage({ mode }: TransactionFormPageProps) 
           previous.cashbookPage === ''
             ? (lastTransaction.cashbookPage ?? '')
             : previous.cashbookPage,
+        transactionDate: hasSelectedTransactionDate.current
+          ? previous.transactionDate
+          : lastTransaction.transactionDate.slice(0, 10),
         chequeDate:
           previous.chequeDate ?? lastTransaction.transactionDate?.slice(0, 10) ?? null,
       }),
@@ -206,7 +210,6 @@ export default function TransactionFormPage({ mode }: TransactionFormPageProps) 
       normalizeTransaction({
         ...previous,
         receiptNo: selectedMember.recieptNo ?? '',
-        transactionDate: selectedMember.joinDate?.slice(0, 10) || previous.transactionDate,
       }),
     );
   }, [form.direction, form.type, isEditing, selectedMember]);
@@ -257,6 +260,9 @@ export default function TransactionFormPage({ mode }: TransactionFormPageProps) 
     field: K,
     value: TransactionPayload[K],
   ) => {
+    if (field === 'transactionDate') {
+      hasSelectedTransactionDate.current = true;
+    }
     setForm(previous => normalizeTransaction({ ...previous, [field]: value }));
   };
 
@@ -277,7 +283,6 @@ export default function TransactionFormPage({ mode }: TransactionFormPageProps) 
         ...(member && !isEditing && previous.direction === 'IN' && previous.type === 'SHARE'
           ? {
               receiptNo: member.recieptNo ?? '',
-              transactionDate: member.joinDate?.slice(0, 10) || previous.transactionDate,
             }
           : {}),
       }),
@@ -427,14 +432,7 @@ export default function TransactionFormPage({ mode }: TransactionFormPageProps) 
                 <section className='border-t border-slate-200 pt-4'>
                   <FormSectionHeading title='Accounts & payment' color='amber' />
                   <div className='space-y-4'>
-                    {(form.type === 'BANK' ||
-                      form.type === 'SHARE' ||
-                      form.type === 'LAYOUT' ||
-                      form.type === 'EXPENSE' ||
-                      form.type === 'INCOME' ||
-                      form.type === 'ADVANCE' ||
-                      form.type === 'ASSET' ||
-                      form.type === 'OTHER') && (
+                    {form.type === 'BANK' && (
                       <AccountFields form={form} accounts={accounts} onFieldChange={updateField} />
                     )}
                     <PaymentFields form={form} onFieldChange={updateField} />

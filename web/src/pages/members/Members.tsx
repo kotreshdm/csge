@@ -12,6 +12,7 @@ import { highlightText } from './helpers';
 import { SortHeader } from '../../components/SortHeader';
 import type { SortField, SortOrder } from './types';
 import { PageToolbar } from '../../components/PageToolbar';
+import { MemberTransactionsModal } from '../../components/dashboard/MemberTransactionsModal';
 
 export default function Members() {
   const [page, setPage] = useState(1);
@@ -24,6 +25,18 @@ export default function Members() {
 
   const [sortBy, setSortBy] = useState<SortField>('joinDate');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
+  const [selectedMember, setSelectedMember] = useState<{
+    memberId: string;
+    memberCode: string;
+    name: string;
+  } | null>(null);
+
+  const currentFinancialYear = useMemo(() => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const startYear = today.getMonth() >= 3 ? year : year - 1;
+    return `${startYear}-${startYear + 1}`;
+  }, []);
 
   const filters = useMemo(
     () => ({
@@ -306,13 +319,28 @@ export default function Members() {
                           {member.postalCode ? highlightText(member.postalCode, search) : '-'}
                         </td>
                         <td className='px-4 py-3 text-right'>
-                          <Link
-                            to={ROUTES.ADMIN.MEMBERS_EDIT(member.memberId)}
-                            state={{ member }}
-                            className='inline-flex items-center rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100'
-                          >
-                            Edit
-                          </Link>
+                          <div className='flex justify-end gap-2'>
+                            <Button
+                              variant='outline'
+                              size='sm'
+                              onClick={() =>
+                                setSelectedMember({
+                                  memberId: member.memberId,
+                                  memberCode: member.memberCode,
+                                  name: member.name,
+                                })
+                              }
+                            >
+                              View
+                            </Button>
+                            <Link
+                              to={ROUTES.ADMIN.MEMBERS_EDIT(member.memberId)}
+                              state={{ member }}
+                              className='inline-flex items-center rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100'
+                            >
+                              Edit
+                            </Link>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -365,6 +393,13 @@ export default function Members() {
           )}
         </div>
       </div>
+
+      <MemberTransactionsModal
+        member={selectedMember}
+        financialYear={currentFinancialYear}
+        open={Boolean(selectedMember)}
+        onClose={() => setSelectedMember(null)}
+      />
     </main>
   );
 }

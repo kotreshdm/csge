@@ -77,19 +77,19 @@ export function validateTransaction(form: TransactionPayload): ValidationErrors 
     }
   }
 
-  if (form.direction === 'IN') {
+  if (form.type === 'BANK' && form.direction === 'IN') {
     if (!form.toAccountId) {
       errors.toAccountId = 'Destination account is required for incoming transactions.';
     }
   }
 
-  if (form.direction === 'OUT') {
+  if (form.type === 'BANK' && form.direction === 'OUT') {
     if (!form.fromAccountId) {
       errors.fromAccountId = 'Source account is required for outgoing transactions.';
     }
   }
 
-  if (form.direction === 'TRANSFER') {
+  if (form.type === 'BANK' && form.direction === 'TRANSFER') {
     if (!form.fromAccountId) {
       errors.fromAccountId = 'Source account is required for transfer transactions.';
     }

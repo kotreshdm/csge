@@ -304,6 +304,87 @@ export type TransactionPayload = Omit<
   updatedBy?: string | null;
 };
 
+export interface DashboardSummaryMonthlyEntry {
+  key: string;
+  label: string;
+  income: string;
+  expense: string;
+  profitLoss: string;
+}
+
+export interface DashboardRecentTransaction {
+  id: string;
+  transactionDate: string;
+  totalAmount: string;
+  direction: 'IN' | 'OUT' | 'TRANSFER';
+  type: 'SHARE' | 'LAYOUT' | 'BANK' | 'EXPENSE' | 'INCOME' | 'ADVANCE' | 'ASSET' | 'OTHER';
+  subType: string;
+  paymentMode: 'CASH' | 'CHEQUE' | 'BANK_TRANSFER' | 'UPI' | 'OTHER' | null;
+  member?: { memberCode: string; name: string } | null;
+  party?: { name: string } | null;
+}
+
+export interface DashboardSummary {
+  financialYear: string;
+  summary: {
+    totalIncome: string;
+    totalExpense: string;
+    profitLoss: string;
+    totalLiability: string;
+    totalMemberShare: string;
+    totalSiteDeposit: string;
+    activeMembers: number;
+    shareMemberCount: number;
+    siteDepositMemberCount: number;
+  };
+  monthly: DashboardSummaryMonthlyEntry[];
+  recentTransactions: DashboardRecentTransaction[];
+}
+
+export interface MemberTransactionDetailsItem {
+  id: string;
+  transactionDate: string;
+  direction: 'IN' | 'OUT' | 'TRANSFER';
+  type: 'SHARE' | 'LAYOUT' | 'BANK' | 'EXPENSE' | 'INCOME' | 'ADVANCE' | 'ASSET' | 'OTHER';
+  subType: string;
+  paymentMode: 'CASH' | 'CHEQUE' | 'BANK_TRANSFER' | 'UPI' | 'OTHER' | null;
+  receiptNo: string | null;
+  chequeNo: string | null;
+  remarks: string | null;
+  description: string | null;
+  memberId: string | null;
+  partyId: string | null;
+  layoutId: string | null;
+  fromLayoutId: string | null;
+  toLayoutId: string | null;
+  totalAmount: string;
+  shareAmount: string;
+  shareFeeAmount: string;
+  membershipFeeAmount: string;
+  siteDepositAmount: string;
+  welfareFundAmount: string;
+  booksFormsAmount: string;
+  miscellaneousAmount: string;
+  otherAmount: string;
+  party?: { name: string; partyType: string } | null;
+  layout?: { name: string; layoutCode: string } | null;
+  fromLayout?: { name: string; layoutCode: string } | null;
+  toLayout?: { name: string; layoutCode: string } | null;
+}
+
+export interface MemberTransactionReport {
+  financialYear: string;
+  balance: {
+    share: string;
+    siteDeposit: string;
+  };
+  items: MemberTransactionDetailsItem[];
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
 export interface PaginatedMembersResponse {
   items: Array<{
     memberId: string;
