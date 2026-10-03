@@ -11,14 +11,14 @@ export const TRANSACTION_TYPES = [
 
 export type TransactionType = (typeof TRANSACTION_TYPES)[number];
 
-export const TRANSACTION_DIRECTIONS = ['IN', 'OUT', 'TRANSFER'] as const;
+export const TRANSACTION_DIRECTIONS = ['IN', 'OUT'] as const;
 export type TransactionDirection = (typeof TRANSACTION_DIRECTIONS)[number];
 
 export const PAYMENT_MODES = ['CASH', 'CHEQUE', 'BANK_TRANSFER', 'UPI', 'OTHER'] as const;
 
 export const VALID_DIRECTIONS_BY_TYPE: Record<TransactionType, readonly TransactionDirection[]> = {
   SHARE: ['IN', 'OUT'],
-  LAYOUT: ['IN', 'OUT', 'TRANSFER'],
+  LAYOUT: ['IN', 'OUT'],
   BANK: ['IN', 'OUT'],
   EXPENSE: ['OUT'],
   INCOME: ['IN'],
@@ -30,7 +30,6 @@ export const VALID_DIRECTIONS_BY_TYPE: Record<TransactionType, readonly Transact
 export const VALID_TYPES_BY_DIRECTION: Record<TransactionDirection, readonly TransactionType[]> = {
   IN: ['SHARE', 'LAYOUT', 'BANK', 'INCOME', 'ADVANCE', 'ASSET', 'OTHER'],
   OUT: ['SHARE', 'LAYOUT', 'BANK', 'EXPENSE', 'ADVANCE', 'ASSET', 'OTHER'],
-  TRANSFER: ['LAYOUT', 'BANK'],
 };
 
 export const SHARE_AMOUNT_FIELDS = [

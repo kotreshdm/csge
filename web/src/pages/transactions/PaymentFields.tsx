@@ -10,7 +10,6 @@ interface PaymentFieldsProps {
 }
 
 export function PaymentFields({ form, onFieldChange }: PaymentFieldsProps) {
-  const disabledForLayoutTransfer = form.type === 'LAYOUT' && form.direction === 'TRANSFER';
   const paymentModeOptions = getPaymentModeOptions();
 
   return (
@@ -25,7 +24,6 @@ export function PaymentFields({ form, onFieldChange }: PaymentFieldsProps) {
               (event.target.value || null) as TransactionPayload['paymentMode'],
             )
           }
-          disabled={disabledForLayoutTransfer}
           className='h-9 min-w-0 rounded-md border border-slate-300 bg-white px-2.5 font-normal text-slate-900 outline-none focus:border-teal-700 focus:ring-2 focus:ring-teal-700/15 disabled:cursor-not-allowed disabled:bg-slate-100'
         >
           <option value=''>No payment mode</option>
@@ -48,7 +46,6 @@ export function PaymentFields({ form, onFieldChange }: PaymentFieldsProps) {
               (event.target.value || null) as TransactionPayload['receiptNo'],
             )
           }
-          disabled={disabledForLayoutTransfer}
           className='h-9 min-w-0 rounded-md border border-slate-300 bg-white px-2.5 font-normal text-slate-900 outline-none focus:border-teal-700 focus:ring-2 focus:ring-teal-700/15 disabled:cursor-not-allowed disabled:bg-slate-100'
         />
       </label>
@@ -65,7 +62,6 @@ export function PaymentFields({ form, onFieldChange }: PaymentFieldsProps) {
             )
           }
           disabled={
-            disabledForLayoutTransfer ||
             form.paymentMode === 'CASH' ||
             form.paymentMode === 'BANK_TRANSFER' ||
             form.paymentMode === 'UPI'
@@ -86,7 +82,6 @@ export function PaymentFields({ form, onFieldChange }: PaymentFieldsProps) {
             )
           }
           disabled={
-            disabledForLayoutTransfer ||
             form.paymentMode === 'CASH' ||
             form.paymentMode === 'BANK_TRANSFER' ||
             form.paymentMode === 'UPI'
@@ -106,11 +101,7 @@ export function PaymentFields({ form, onFieldChange }: PaymentFieldsProps) {
               (event.target.value || null) as TransactionPayload['bankReferenceNo'],
             )
           }
-          disabled={
-            disabledForLayoutTransfer ||
-            form.paymentMode === 'CHEQUE' ||
-            form.paymentMode === 'CASH'
-          }
+          disabled={form.paymentMode === 'CHEQUE' || form.paymentMode === 'CASH'}
           className='h-9 min-w-0 rounded-md border border-slate-300 bg-white px-2.5 font-normal text-slate-900 outline-none focus:border-teal-700 focus:ring-2 focus:ring-teal-700/15 disabled:cursor-not-allowed disabled:bg-slate-100'
         />
       </label>

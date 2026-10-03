@@ -60,46 +60,12 @@ export function validateTransaction(form: TransactionPayload): ValidationErrors 
     }
   }
 
-  if (form.type === 'LAYOUT') {
-    if (form.direction === 'TRANSFER') {
-      if (!form.fromLayoutId) {
-        errors.fromLayoutId = 'Source layout is required for layout transfer.';
-      }
-      if (!form.toLayoutId) {
-        errors.toLayoutId = 'Destination layout is required for layout transfer.';
-      }
-      if (form.fromLayoutId && form.toLayoutId && form.fromLayoutId === form.toLayoutId) {
-        errors.fromLayoutId = 'Source and destination layouts must be different.';
-        errors.toLayoutId = 'Source and destination layouts must be different.';
-      }
-    } else if (!form.layoutId) {
-      errors.layoutId = 'Layout is required for this transaction type.';
-    }
+  if (form.type === 'LAYOUT' && !form.layoutId) {
+    errors.layoutId = 'Layout is required for this transaction type.';
   }
 
-  if (form.type === 'BANK' && form.direction === 'IN') {
-    if (!form.toAccountId) {
-      errors.toAccountId = 'Destination account is required for incoming transactions.';
-    }
-  }
-
-  if (form.type === 'BANK' && form.direction === 'OUT') {
-    if (!form.fromAccountId) {
-      errors.fromAccountId = 'Source account is required for outgoing transactions.';
-    }
-  }
-
-  if (form.type === 'BANK' && form.direction === 'TRANSFER') {
-    if (!form.fromAccountId) {
-      errors.fromAccountId = 'Source account is required for transfer transactions.';
-    }
-    if (!form.toAccountId) {
-      errors.toAccountId = 'Destination account is required for transfer transactions.';
-    }
-    if (form.fromAccountId && form.toAccountId && form.fromAccountId === form.toAccountId) {
-      errors.fromAccountId = 'Source and destination accounts must be different.';
-      errors.toAccountId = 'Source and destination accounts must be different.';
-    }
+  if (form.type === 'BANK' && !form.accountId) {
+    errors.accountId = 'Account is required for bank transactions.';
   }
 
   if (form.type === 'SHARE' && form.direction === 'IN' && !form.receiptNo) {
@@ -125,18 +91,6 @@ export function validateTransaction(form: TransactionPayload): ValidationErrors 
     }
     if (!form.chequeDate) {
       errors.chequeDate = 'Cheque date is required for layout withdrawals.';
-    }
-  }
-
-  if (form.type === 'LAYOUT' && form.direction === 'TRANSFER') {
-    if (
-      form.receiptNo ||
-      form.chequeNo ||
-      form.chequeDate ||
-      form.bankReferenceNo ||
-      form.paymentMode
-    ) {
-      errors.paymentMode = 'Payment and receipt fields must be cleared for layout transfers.';
     }
   }
 

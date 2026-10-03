@@ -184,33 +184,6 @@ export default function App() {
           />
 
           <Route
-            path={ROUTES.ADMIN.ACCOUNTS}
-            element={
-              <ProtectedRoute>
-                <Accounts />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path={ROUTES.ADMIN.ACCOUNTS_ADD}
-            element={
-              <ProtectedRoute>
-                <AddAccount />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path={ROUTES.ADMIN.ACCOUNTS_EDIT(':id')}
-            element={
-              <ProtectedRoute>
-                <EditAccount />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
             path={ROUTES.ADMIN.CHEQUE_RANGES}
             element={
               <ProtectedRoute>

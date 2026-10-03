@@ -6,7 +6,7 @@ type LayoutOption = Pick<Layout, 'id' | 'layoutCode' | 'name'>;
 interface LayoutSelectorProps {
   form: TransactionPayload;
   layouts: LayoutOption[];
-  field: 'layoutId' | 'fromLayoutId' | 'toLayoutId';
+  field: 'layoutId';
   label: string;
   disabled?: boolean;
   onFieldChange: <K extends keyof TransactionPayload>(

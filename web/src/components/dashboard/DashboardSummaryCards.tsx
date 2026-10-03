@@ -1,130 +1,64 @@
-import type { LucideIcon } from 'lucide-react';
-import {
-  ArrowDownRight,
-  ArrowUpRight,
-  Landmark,
-  PiggyBank,
-  ShieldCheck,
-  TrendingUp,
-  Wallet,
-} from 'lucide-react';
-
-import { Card, CardContent } from '@/components/ui/card';
-
-interface SummaryCardProps {
-  title: string;
-  value: string;
-  subtitle: string;
-  tone?: 'neutral' | 'positive' | 'negative' | 'accent';
-  icon: LucideIcon;
-}
+import type { DashboardSummary } from '../../api/types';
 
 function formatCurrency(value: string) {
   const amount = Number(value || 0);
   return new Intl.NumberFormat('en-IN', {
     style: 'currency',
     currency: 'INR',
-    maximumFractionDigits: 0,
+    maximumFractionDigits: 2,
   }).format(amount);
 }
 
-function SummaryCard({ title, value, subtitle, tone = 'neutral', icon: Icon }: SummaryCardProps) {
-  const toneStyles = {
-    neutral: 'border-slate-200 bg-slate-50 text-slate-900',
-    positive: 'border-emerald-200 bg-emerald-50 text-emerald-900',
-    negative: 'border-rose-200 bg-rose-50 text-rose-900',
-    accent: 'border-cyan-200 bg-cyan-50 text-cyan-900',
-  };
-
+function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <Card className={toneStyles[tone]}>
-      <CardContent className='p-4'>
-        <div className='flex items-start justify-between gap-3'>
-          <div>
-            <p className='text-xs font-semibold uppercase tracking-[0.16em] text-slate-500'>
-              {title}
-            </p>
-            <p className='mt-3 text-2xl font-bold tracking-tight'>{value}</p>
-          </div>
-          <div className='rounded-xl border border-current/10 bg-white/70 p-2.5 text-current'>
-            <Icon className='h-5 w-5' />
-          </div>
-        </div>
-        <p className='mt-3 text-xs text-slate-500'>{subtitle}</p>
-      </CardContent>
-    </Card>
+    <div className='min-w-0 border-l-2 border-emerald-700 pl-4'>
+      <p className='text-sm text-slate-600'>{label}</p>
+      <p className='mt-1 break-words text-xl font-semibold tabular-nums text-slate-950 sm:text-2xl'>
+        {value}
+      </p>
+    </div>
   );
 }
 
-interface DashboardSummaryCardsProps {
-  totalIncome: string;
-  totalExpense: string;
-  profitLoss: string;
-  totalLiability: string;
-  totalMemberShare: string;
-  totalSiteDeposit: string;
-  financialYear: string;
-}
-
-export function DashboardSummaryCards({
-  totalIncome,
-  totalExpense,
-  profitLoss,
-  totalLiability,
-  totalMemberShare,
-  totalSiteDeposit,
-  financialYear,
-}: DashboardSummaryCardsProps) {
-  const cards: SummaryCardProps[] = [
-    {
-      title: 'Total Income',
-      value: formatCurrency(totalIncome),
-      subtitle: `${financialYear} income`,
-      tone: 'positive',
-      icon: Wallet,
-    },
-    {
-      title: 'Total Expense',
-      value: formatCurrency(totalExpense),
-      subtitle: `${financialYear} expense`,
-      tone: 'negative',
-      icon: ArrowDownRight,
-    },
-    {
-      title: profitLoss >= '0' ? 'Profit' : 'Loss',
-      value: formatCurrency(profitLoss),
-      subtitle: `${financialYear} net result`,
-      tone: profitLoss >= '0' ? 'positive' : 'negative',
-      icon: profitLoss >= '0' ? TrendingUp : ArrowUpRight,
-    },
-    {
-      title: 'Total Liability',
-      value: formatCurrency(totalLiability),
-      subtitle: `Share + site deposit`,
-      tone: 'accent',
-      icon: Landmark,
-    },
-    {
-      title: 'Member Share',
-      value: formatCurrency(totalMemberShare),
-      subtitle: 'Open member share balance',
-      tone: 'neutral',
-      icon: PiggyBank,
-    },
-    {
-      title: 'Site Deposit',
-      value: formatCurrency(totalSiteDeposit),
-      subtitle: 'Site deposit liability',
-      tone: 'neutral',
-      icon: ShieldCheck,
-    },
-  ];
-
+export function DashboardSummaryCards({ summary }: { summary: DashboardSummary['summary'] }) {
+  const memberShare = Number(summary.memberShare);
+  const associateShare = Number(summary.associateShare);
+  const totalShare = memberShare + associateShare;
+  const totalMemberCount = summary.memberShareCount + summary.associateShareCount;
+  const net = Number(summary.totalIncome) - Number(summary.totalExpense);
   return (
-    <div className='grid gap-4 sm:grid-cols-2 xl:grid-cols-3'>
-      {cards.map((card) => (
-        <SummaryCard key={card.title} {...card} />
-      ))}
+    <div className='space-y-8'>
+      <section aria-labelledby='share-summary-heading'>
+        <h2 id='share-summary-heading' className='mb-4 text-lg font-semibold text-slate-900'>
+          Share Summary
+        </h2>
+        <div className='grid gap-y-6 sm:grid-cols-2 lg:grid-cols-3'>
+          <Metric label='Member Share' value={formatCurrency(String(memberShare))} />
+          <Metric label='Associate Share' value={formatCurrency(String(associateShare))} />
+          <Metric label='Total Share' value={formatCurrency(String(totalShare))} />
+          <Metric label='Member Count' value={String(summary.memberShareCount)} />
+          <Metric label='Associate Count' value={String(summary.associateShareCount)} />
+          <Metric label='Total Member Count' value={String(totalMemberCount)} />
+        </div>
+      </section>
+
+      <section aria-labelledby='site-deposit-heading'>
+        <h2 id='site-deposit-heading' className='mb-4 text-lg font-semibold text-slate-900'>
+          Total Site Deposit
+        </h2>
+        <Metric label='Across all layouts' value={formatCurrency(summary.totalSiteDeposit)} />
+      </section>
+
+      <section aria-labelledby='income-outgoing-heading'>
+        <h2 id='income-outgoing-heading' className='mb-4 text-lg font-semibold text-slate-900'>
+          Income / Outgoing
+        </h2>
+        <div className='grid gap-y-6 sm:grid-cols-2 lg:grid-cols-3'>
+          <Metric label='Total Income' value={formatCurrency(summary.totalIncome)} />
+          <Metric label='Total Outgoing' value={formatCurrency(summary.totalExpense)} />
+          <Metric label='Net' value={formatCurrency(String(net))} />
+        </div>
+      </section>
     </div>
   );
 }

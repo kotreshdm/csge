@@ -21,10 +21,6 @@ export const ROUTES = {
     LAYOUTS_ADD: '/admin/layouts/add',
     LAYOUTS_EDIT: (layoutId: string) => `/admin/layouts/${layoutId}/edit`,
 
-    ACCOUNTS: '/admin/accounts',
-    ACCOUNTS_ADD: '/admin/accounts/add',
-    ACCOUNTS_EDIT: (accountId: string) => `/admin/accounts/${accountId}/edit`,
-
     CHEQUE_RANGES: '/admin/cheque-ranges',
 
     TRANSACTIONS: '/admin/transactions',

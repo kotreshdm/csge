@@ -195,8 +195,7 @@ export default function TransactionFormPage({ mode }: TransactionFormPageProps) 
         transactionDate: hasSelectedTransactionDate.current
           ? previous.transactionDate
           : lastTransaction.transactionDate.slice(0, 10),
-        chequeDate:
-          previous.chequeDate ?? lastTransaction.transactionDate?.slice(0, 10) ?? null,
+        chequeDate: previous.chequeDate ?? lastTransaction.transactionDate?.slice(0, 10) ?? null,
       }),
     );
   }, [isEditing, transactionListData]);
@@ -226,7 +225,7 @@ export default function TransactionFormPage({ mode }: TransactionFormPageProps) 
 
       const defaults = {
         receiptNo: previous.receiptNo || lastShareInTransaction.receiptNo || '',
-        toAccountId: previous.toAccountId ?? lastShareInTransaction.toAccountId ?? null,
+        accountId: previous.accountId ?? lastShareInTransaction.accountId ?? null,
         paymentMode: previous.paymentMode ?? lastShareInTransaction.paymentMode ?? null,
         shareAmount:
           previous.shareAmount === '0' ? lastShareInTransaction.shareAmount : previous.shareAmount,

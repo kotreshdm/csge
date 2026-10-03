@@ -22,7 +22,7 @@ function formatLocalDateInput(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
-const directions = ["IN", "OUT", "TRANSFER"] as const;
+const directions = ["IN", "OUT"] as const;
 const transactionTypes = [
   "SHARE",
   "LAYOUT",
@@ -189,24 +189,10 @@ function transactionData(input: TransactionInput) {
     throw new AppError(400, "Sub-type is required.");
   }
 
-  const fromAccountId =
-    type === "BANK" ? parseId(input.fromAccountId, "Source account ID") : null;
-  const toAccountId =
-    type === "BANK"
-      ? parseId(input.toAccountId, "Destination account ID")
-      : null;
-  if (type === "BANK" && direction !== "IN" && fromAccountId === null) {
-    throw new AppError(400, "Source account is required for outgoing bank transactions.");
-  }
-  if (type === "BANK" && direction !== "OUT" && toAccountId === null) {
-    throw new AppError(400, "Destination account is required for incoming bank transactions.");
-  }
-  if (
-    type === "BANK" &&
-    direction === "TRANSFER" &&
-    fromAccountId === toAccountId
-  ) {
-    throw new AppError(400, "Source and destination accounts must be different.");
+  const accountId =
+    type === "BANK" ? parseId(input.accountId, "Account ID") : null;
+  if (type === "BANK" && accountId === null) {
+    throw new AppError(400, "Account is required for bank transactions.");
   }
 
   return {
@@ -219,8 +205,7 @@ function transactionData(input: TransactionInput) {
     memberId: parseId(input.memberId, "Member ID"),
     partyId: parseId(input.partyId, "Party ID"),
     layoutId: parseId(input.layoutId, "Layout ID"),
-    fromLayoutId: parseId(input.fromLayoutId, "Source layout ID"),
-    toLayoutId: parseId(input.toLayoutId, "Destination layout ID"),
+    accountId,
     shareAmount,
     shareFeeAmount,
     membershipFeeAmount,
@@ -230,8 +215,6 @@ function transactionData(input: TransactionInput) {
     miscellaneousAmount,
     otherAmount,
     totalAmount,
-    fromAccountId,
-    toAccountId,
     receiptNo: optionalString(input.receiptNo, "Receipt number"),
     paymentMode: optionalEnum<PaymentMode>(
       input.paymentMode,
@@ -266,10 +249,7 @@ function serializeTransaction(transaction: TransactionRecord) {
     memberId: transaction.memberId?.toString() ?? null,
     partyId: transaction.partyId?.toString() ?? null,
     layoutId: transaction.layoutId?.toString() ?? null,
-    fromLayoutId: transaction.fromLayoutId?.toString() ?? null,
-    toLayoutId: transaction.toLayoutId?.toString() ?? null,
-    fromAccountId: transaction.fromAccountId?.toString() ?? null,
-    toAccountId: transaction.toAccountId?.toString() ?? null,
+    accountId: transaction.accountId?.toString() ?? null,
     referenceTransactionId:
       transaction.referenceTransactionId?.toString() ?? null,
     createdBy: transaction.createdBy.toString(),

@@ -40,8 +40,7 @@ export function blankTransaction(memberId = ''): TransactionPayload {
     memberId: null,
     partyId: null,
     layoutId: null,
-    fromLayoutId: null,
-    toLayoutId: null,
+    accountId: null,
     shareAmount: '0',
     shareFeeAmount: '0',
     membershipFeeAmount: '0',
@@ -51,8 +50,6 @@ export function blankTransaction(memberId = ''): TransactionPayload {
     miscellaneousAmount: '0',
     otherAmount: '0',
     totalAmount: '0',
-    fromAccountId: null,
-    toAccountId: null,
     receiptNo: null,
     paymentMode: null,
     chequeNo: null,
@@ -104,10 +101,6 @@ export function isPartyVisible(type: string) {
 
 export function isLayoutVisible(type: string) {
   return LAYOUT_VISIBLE_TYPES.has(type);
-}
-
-export function isLayoutTransfer(form: TransactionPayload) {
-  return form.type === 'LAYOUT' && form.direction === 'TRANSFER';
 }
 
 function normalizePartyType(partyType: string) {
@@ -241,15 +234,6 @@ function zeroUnrelatedAmountFields(next: TransactionPayload) {
 }
 
 function normalizePaymentFields(next: TransactionPayload) {
-  if (next.type === 'LAYOUT' && next.direction === 'TRANSFER') {
-    next.paymentMode = null;
-    next.receiptNo = null;
-    next.chequeNo = null;
-    next.chequeDate = null;
-    next.bankReferenceNo = null;
-    return;
-  }
-
   if (next.paymentMode === 'CASH') {
     next.chequeNo = null;
     next.chequeDate = null;
@@ -276,43 +260,19 @@ function normalizePaymentFields(next: TransactionPayload) {
 
 function normalizeAccountFields(next: TransactionPayload) {
   if (next.type !== 'BANK') {
-    next.fromAccountId = null;
-    next.toAccountId = null;
+    next.accountId = null;
     return;
   }
 
-  if (next.direction === 'IN') {
-    next.fromAccountId = null;
-  }
-
-  if (next.direction === 'OUT') {
-    next.toAccountId = null;
-  }
-
-  if (next.direction === 'TRANSFER') {
-    if (next.fromAccountId === next.toAccountId) {
-      next.toAccountId = null;
-    }
-  }
+  next.accountId = next.accountId ?? null;
 }
 
 function normalizeLayoutFields(next: TransactionPayload) {
   if (next.type !== 'LAYOUT') {
     next.layoutId = null;
-    next.fromLayoutId = null;
-    next.toLayoutId = null;
     return;
   }
 
-  if (next.direction === 'TRANSFER') {
-    next.layoutId = null;
-    next.fromLayoutId = next.fromLayoutId ?? null;
-    next.toLayoutId = next.toLayoutId ?? null;
-    return;
-  }
-
-  next.fromLayoutId = null;
-  next.toLayoutId = null;
   next.layoutId = next.layoutId ?? null;
 }
 
@@ -366,8 +326,6 @@ export function normalizeTransaction(form: TransactionPayload): TransactionPaylo
   if (next.type === 'SHARE') {
     next.partyId = null;
     next.layoutId = null;
-    next.fromLayoutId = null;
-    next.toLayoutId = null;
     next.siteDepositAmount = ZERO;
     next.otherAmount = ZERO;
     next.shareAmount = next.shareAmount || ZERO;
@@ -389,18 +347,12 @@ export function normalizeTransaction(form: TransactionPayload): TransactionPaylo
     next.booksFormsAmount = ZERO;
     next.miscellaneousAmount = ZERO;
     next.otherAmount = ZERO;
-    if (next.direction !== 'TRANSFER') {
-      next.fromLayoutId = null;
-      next.toLayoutId = null;
-    }
   }
 
   if (next.type === 'BANK') {
     next.memberId = null;
     next.partyId = null;
     next.layoutId = null;
-    next.fromLayoutId = null;
-    next.toLayoutId = null;
     next.subType = '';
     next.shareAmount = ZERO;
     next.shareFeeAmount = ZERO;
@@ -459,10 +411,7 @@ export function buildTransactionPayload(
     memberId: isMemberVisible(next.type) ? next.memberId || null : null,
     partyId: isPartyVisible(next.type) ? next.partyId || null : null,
     layoutId: isLayoutVisible(next.type) ? next.layoutId || null : null,
-    fromLayoutId:
-      next.type === 'LAYOUT' && next.direction === 'TRANSFER' ? next.fromLayoutId || null : null,
-    toLayoutId:
-      next.type === 'LAYOUT' && next.direction === 'TRANSFER' ? next.toLayoutId || null : null,
+    accountId: next.type === 'BANK' ? next.accountId || null : null,
     shareAmount: next.type === 'SHARE' ? next.shareAmount : '0',
     shareFeeAmount: next.type === 'SHARE' && next.direction === 'IN' ? next.shareFeeAmount : '0',
     membershipFeeAmount:
@@ -478,33 +427,16 @@ export function buildTransactionPayload(
       ? next.otherAmount
       : '0',
     totalAmount: calculateTotalAmount(next),
-    fromAccountId:
-      next.type === 'BANK' && next.direction !== 'IN' ? next.fromAccountId || null : null,
-    toAccountId:
-      next.type === 'BANK' && next.direction !== 'OUT' ? next.toAccountId || null : null,
-    receiptNo:
-      next.type === 'LAYOUT' && next.direction === 'TRANSFER' ? null : next.receiptNo || null,
-    paymentMode:
-      next.type === 'LAYOUT' && next.direction === 'TRANSFER' ? null : next.paymentMode || null,
-    chequeNo:
-      next.type === 'LAYOUT' && next.direction === 'TRANSFER' ? null : next.chequeNo || null,
-    chequeDate:
-      next.type === 'LAYOUT' && next.direction === 'TRANSFER' ? null : next.chequeDate || null,
-    bankReferenceNo:
-      next.type === 'LAYOUT' && next.direction === 'TRANSFER' ? null : next.bankReferenceNo || null,
+    receiptNo: next.receiptNo || null,
+    paymentMode: next.paymentMode || null,
+    chequeNo: next.chequeNo || null,
+    chequeDate: next.chequeDate || null,
+    bankReferenceNo: next.bankReferenceNo || null,
     referenceTransactionId: next.referenceTransactionId || null,
     description: next.description || null,
     remarks: next.remarks || null,
     ...(isEditing ? { updatedBy: actorMemberId } : { createdBy: actorMemberId }),
   };
-
-  if (next.type === 'LAYOUT' && next.direction === 'TRANSFER') {
-    payload.paymentMode = null;
-    payload.receiptNo = null;
-    payload.chequeNo = null;
-    payload.chequeDate = null;
-    payload.bankReferenceNo = null;
-  }
 
   return payload;
 }

@@ -57,10 +57,6 @@ function transactionMeta(item: MemberTransactionDetailsItem) {
     if (item.layout?.name) parts.push(`Layout: ${item.layout.name}`);
     if (Number(item.siteDepositAmount || 0) > 0)
       parts.push(`Site Deposit: ${formatCurrency(item.siteDepositAmount)}`);
-    if (item.direction === 'TRANSFER') {
-      if (item.fromLayout?.name) parts.push(`From: ${item.fromLayout.name}`);
-      if (item.toLayout?.name) parts.push(`To: ${item.toLayout.name}`);
-    }
   } else {
     if (item.type) parts.push(`Type: ${item.type}`);
     if (item.subType) parts.push(`Sub Type: ${item.subType}`);

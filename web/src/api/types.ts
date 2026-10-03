@@ -111,6 +111,54 @@ export interface AccountPayload {
   isActive: boolean;
 }
 
+export interface AccountStatementAccount {
+  id: string;
+  accountCode: string;
+  name: string;
+  accountType: string;
+  openingBalance: string;
+  totalCredit: string;
+  totalDebit: string;
+  closingBalance: string;
+}
+
+export interface AccountStatementTransaction extends Transaction {
+  member: { memberCode: string; name: string } | null;
+  party: { name: string; partyType: string } | null;
+  layout: { layoutCode: string; name: string } | null;
+  fromLayout: { layoutCode: string; name: string } | null;
+  toLayout: { layoutCode: string; name: string } | null;
+  fromAccount: { accountCode: string; name: string } | null;
+  toAccount: { accountCode: string; name: string } | null;
+  debit: string;
+  credit: string;
+  runningBalance: string;
+}
+
+export interface AccountStatementReport {
+  period: { fromDate: string; toDate: string };
+  accounts: AccountStatementAccount[];
+  bankTotals: {
+    openingBalance: string;
+    totalCredit: string;
+    totalDebit: string;
+    closingBalance: string;
+  };
+  statement: {
+    account: Pick<AccountStatementAccount, 'id' | 'accountCode' | 'name' | 'accountType'>;
+    period: { fromDate: string; toDate: string };
+    openingBalance: string;
+    totalCredit: string;
+    totalDebit: string;
+    closingBalance: string;
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+    transactions: AccountStatementTransaction[];
+  } | null;
+}
+
 export interface Director {
   id: string;
   memberId: string;
@@ -263,14 +311,13 @@ export interface Transaction {
   cashbookNo: number | null;
   cashbookPage: number | null;
   transactionDate: string;
-  direction: 'IN' | 'OUT' | 'TRANSFER';
+  direction: 'IN' | 'OUT';
   type: 'SHARE' | 'LAYOUT' | 'BANK' | 'EXPENSE' | 'INCOME' | 'ADVANCE' | 'ASSET' | 'OTHER';
   subType: string;
   memberId: string | null;
   partyId: string | null;
   layoutId: string | null;
-  fromLayoutId: string | null;
-  toLayoutId: string | null;
+  accountId: string | null;
   shareAmount: string;
   shareFeeAmount: string;
   membershipFeeAmount: string;
@@ -280,8 +327,6 @@ export interface Transaction {
   miscellaneousAmount: string;
   otherAmount: string;
   totalAmount: string;
-  fromAccountId: string | null;
-  toAccountId: string | null;
   receiptNo: string | null;
   paymentMode: 'CASH' | 'CHEQUE' | 'BANK_TRANSFER' | 'UPI' | 'OTHER' | null;
   chequeNo: string | null;
@@ -316,12 +361,87 @@ export interface DashboardRecentTransaction {
   id: string;
   transactionDate: string;
   totalAmount: string;
-  direction: 'IN' | 'OUT' | 'TRANSFER';
+  direction: 'IN' | 'OUT';
   type: 'SHARE' | 'LAYOUT' | 'BANK' | 'EXPENSE' | 'INCOME' | 'ADVANCE' | 'ASSET' | 'OTHER';
   subType: string;
   paymentMode: 'CASH' | 'CHEQUE' | 'BANK_TRANSFER' | 'UPI' | 'OTHER' | null;
   member?: { memberCode: string; name: string } | null;
   party?: { name: string } | null;
+  layout?: { layoutCode: string; name: string } | null;
+  account?: { accountCode: string; name: string } | null;
+}
+
+export interface DashboardAmountItem {
+  label: string;
+  amount: string;
+}
+
+export interface DashboardLayoutDeposit {
+  id: string;
+  label: string;
+  amount: string;
+  memberCount: number;
+  received: string;
+  withdrawn: string;
+  transferIn: string;
+  transferOut: string;
+}
+
+export interface DashboardBankAccount {
+  id: string;
+  label: string;
+  balance: string;
+}
+
+export interface DashboardAccountBalance extends DashboardBankAccount {
+  accountType: string;
+}
+
+export interface DashboardAdvanceSubtype {
+  subType: string;
+  received: string;
+  paid: string;
+  net: string;
+}
+
+export interface DashboardAdvanceParty {
+  id: string;
+  name: string;
+  partyType: string;
+  given: string;
+  received: string;
+  balance: string;
+}
+
+export interface DashboardTransactionTypeSummary {
+  type: Transaction['type'];
+  count: number;
+  amount: string;
+}
+
+export interface DashboardTransaction extends Transaction {
+  member: { memberCode: string; name: string } | null;
+  party: { name: string; partyType: string } | null;
+  layout: { layoutCode: string; name: string } | null;
+  account: { accountCode: string; name: string; accountType: string } | null;
+}
+
+export interface DashboardTransactionsPage {
+  financialYear: string;
+  items: DashboardTransaction[];
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+export interface DashboardMemberSummary {
+  memberId: string;
+  memberCode: string;
+  name: string;
+  memberType: 'MEMBER' | 'ASSOCIATE' | 'SUPERUSER';
+  shareBalance: string;
+  siteDepositBalance: string;
 }
 
 export interface DashboardSummary {
@@ -331,20 +451,49 @@ export interface DashboardSummary {
     totalExpense: string;
     profitLoss: string;
     totalLiability: string;
+    memberShareLiability: string;
+    siteDepositLiability: string;
+    advanceLiability: string;
+    advanceReceivable: string;
+    advancesGiven: string;
+    advancesReceived: string;
+    netAdvanceBalance: string;
     totalMemberShare: string;
+    memberShare: string;
+    associateShare: string;
+    memberShareCount: number;
+    associateShareCount: number;
     totalSiteDeposit: string;
+    cashBalance: string;
+    bankBalance: string;
+    totalAvailableFunds: string;
+    welfareFund: string;
+    welfareFundReceived: string;
+    welfareFundUsed: string;
+    welfareFundCurrentBalance: string;
+    welfareContributorCount: number;
     activeMembers: number;
     shareMemberCount: number;
     siteDepositMemberCount: number;
   };
   monthly: DashboardSummaryMonthlyEntry[];
+  incomeBreakdown: DashboardAmountItem[];
+  expenseBreakdown: DashboardAmountItem[];
+  layoutDeposits: DashboardLayoutDeposit[];
+  bankAccounts: DashboardBankAccount[];
+  accountBalances: DashboardAccountBalance[];
+  advanceSubtypeBreakdown: DashboardAdvanceSubtype[];
+  advancePartyBreakdown: DashboardAdvanceParty[];
+  transactionTypeSummary: DashboardTransactionTypeSummary[];
+  transactionSubtypes: Array<{ type: Transaction['type']; subType: string }>;
+  members: DashboardMemberSummary[];
   recentTransactions: DashboardRecentTransaction[];
 }
 
 export interface MemberTransactionDetailsItem {
   id: string;
   transactionDate: string;
-  direction: 'IN' | 'OUT' | 'TRANSFER';
+  direction: 'IN' | 'OUT';
   type: 'SHARE' | 'LAYOUT' | 'BANK' | 'EXPENSE' | 'INCOME' | 'ADVANCE' | 'ASSET' | 'OTHER';
   subType: string;
   paymentMode: 'CASH' | 'CHEQUE' | 'BANK_TRANSFER' | 'UPI' | 'OTHER' | null;
@@ -355,8 +504,7 @@ export interface MemberTransactionDetailsItem {
   memberId: string | null;
   partyId: string | null;
   layoutId: string | null;
-  fromLayoutId: string | null;
-  toLayoutId: string | null;
+  accountId: string | null;
   totalAmount: string;
   shareAmount: string;
   shareFeeAmount: string;
@@ -368,8 +516,7 @@ export interface MemberTransactionDetailsItem {
   otherAmount: string;
   party?: { name: string; partyType: string } | null;
   layout?: { name: string; layoutCode: string } | null;
-  fromLayout?: { name: string; layoutCode: string } | null;
-  toLayout?: { name: string; layoutCode: string } | null;
+  account?: { name: string; accountCode: string } | null;
 }
 
 export interface MemberTransactionReport {

@@ -1,5 +1,9 @@
 import { api } from './client';
-import type { DashboardSummary, MemberTransactionReport } from './types';
+import type {
+  DashboardSummary,
+  DashboardTransactionsPage,
+  MemberTransactionReport,
+} from './types';
 
 type DashboardFinancialYearsResponse = {
   success: boolean;
@@ -9,6 +13,14 @@ type DashboardFinancialYearsResponse = {
   };
 };
 
+type DashboardSummaryPeriod =
+  | string
+  | {
+      financialYear?: string;
+      fromDate?: string;
+      toDate?: string;
+    };
+
 export function getFinancialYears() {
   return api<DashboardFinancialYearsResponse>({
     method: 'GET',
@@ -16,7 +28,16 @@ export function getFinancialYears() {
   });
 }
 
-export function getDashboardSummary(financialYear: string) {
+export function getDashboardSummary(period: DashboardSummaryPeriod) {
+  const params =
+    typeof period === 'string'
+      ? { financialYear: period }
+      : {
+          financialYear: period.financialYear || undefined,
+          fromDate: period.fromDate || undefined,
+          toDate: period.toDate || undefined,
+        };
+
   return api<{
     success: boolean;
     message: string;
@@ -24,7 +45,27 @@ export function getDashboardSummary(financialYear: string) {
   }>({
     method: 'GET',
     url: '/dashboard/summary',
-    params: { financialYear },
+    params,
+  });
+}
+
+export function getDashboardTransactions(params: {
+  financialYear: string;
+  page?: number;
+  limit?: number;
+}) {
+  return api<{
+    success: boolean;
+    message: string;
+    data: DashboardTransactionsPage;
+  }>({
+    method: 'GET',
+    url: '/dashboard/transactions',
+    params: {
+      financialYear: params.financialYear,
+      page: params.page ?? 1,
+      limit: params.limit ?? 20,
+    },
   });
 }
 
