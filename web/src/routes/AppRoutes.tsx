@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
+import type { ReactNode } from 'react';
 
 import { ROUTES } from '../const/routs';
 import AdminDashboard from '../pages/AdminDashboard';
@@ -8,84 +9,64 @@ import AddTransaction from '../pages/transactions/AddTransaction';
 import EditTransaction from '../pages/transactions/EditTransaction';
 import Transactions from '../pages/transactions/TransactionsList';
 import ChequeRanges from '../pages/chequeRanges/ChequeRanges';
-import type { JSX } from 'react/jsx-runtime';
 
-function hasAccessToken() {
-  return Boolean(localStorage.getItem('accessToken'));
+const protectedRoutes: { path: string; element: ReactNode }[] = [
+  {
+    path: ROUTES.ADMIN.ROOT,
+    element: <AdminDashboard />,
+  },
+  {
+    path: ROUTES.ADMIN.TRANSACTIONS,
+    element: <Transactions />,
+  },
+  {
+    path: ROUTES.ADMIN.CHEQUE_RANGES,
+    element: <ChequeRanges />,
+  },
+  {
+    path: ROUTES.ADMIN.TRANSACTIONS_ADD,
+    element: <AddTransaction />,
+  },
+  {
+    path: '/admin/transactions/:id/edit',
+    element: <EditTransaction />,
+  },
+];
+
+const publicRoutes: { path: string; element: ReactNode }[] = [
+  {
+    path: ROUTES.ADMIN.LOGIN,
+    element: <Login />,
+  },
+  {
+    path: ROUTES.ADMIN.REGISTER,
+    element: <Register />,
+  },
+];
+
+const isAuthenticated = () => Boolean(localStorage.getItem('accessToken'));
+
+function ProtectedRoute({ children }: { children: ReactNode }) {
+  return isAuthenticated() ? children : <Navigate to={ROUTES.ADMIN.LOGIN} replace />;
 }
 
-function ProtectedRoute({ children }: { children: JSX.Element }) {
-  return hasAccessToken() ? children : <Navigate to={ROUTES.ADMIN.LOGIN} replace />;
-}
-
-function RedirectIfAuthenticated({ children }: { children: JSX.Element }) {
-  return hasAccessToken() ? <Navigate to={ROUTES.ADMIN.ROOT} replace /> : children;
+function PublicRoute({ children }: { children: ReactNode }) {
+  return isAuthenticated() ? <Navigate to={ROUTES.ADMIN.ROOT} replace /> : children;
 }
 
 export default function AppRoutes() {
   return (
     <Routes>
-      <Route
-        path={ROUTES.ADMIN.ROOT}
-        element={
-          <ProtectedRoute>
-            <AdminDashboard />
-          </ProtectedRoute>
-        }
-      />
+      {protectedRoutes.map(({ path, element }) => (
+        <Route key={path} path={path} element={<ProtectedRoute>{element}</ProtectedRoute>} />
+      ))}
 
-      <Route
-        path={ROUTES.ADMIN.TRANSACTIONS}
-        element={
-          <ProtectedRoute>
-            <Transactions />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path={ROUTES.ADMIN.CHEQUE_RANGES}
-        element={
-          <ProtectedRoute>
-            <ChequeRanges />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path={ROUTES.ADMIN.TRANSACTIONS_ADD}
-        element={
-          <ProtectedRoute>
-            <AddTransaction />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path='/admin/transactions/:id/edit'
-        element={
-          <ProtectedRoute>
-            <EditTransaction />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path={ROUTES.ADMIN.LOGIN}
-        element={
-          <RedirectIfAuthenticated>
-            <Login />
-          </RedirectIfAuthenticated>
-        }
-      />
-
-      <Route
-        path={ROUTES.ADMIN.REGISTER}
-        element={
-          <RedirectIfAuthenticated>
-            <Register />
-          </RedirectIfAuthenticated>
-        }
-      />
+      {publicRoutes.map(({ path, element }) => (
+        <Route key={path} path={path} element={<PublicRoute>{element}</PublicRoute>} />
+      ))}
 
       <Route path={ROUTES.ROOT} element={<Navigate to={ROUTES.ADMIN.LOGIN} replace />} />
+
       <Route path='*' element={<Navigate to={ROUTES.ADMIN.LOGIN} replace />} />
     </Routes>
   );

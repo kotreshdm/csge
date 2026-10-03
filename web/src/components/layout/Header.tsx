@@ -1,20 +1,96 @@
-import { Building2, LogOut } from 'lucide-react';
+import { Building2, ChevronDown, LogOut } from 'lucide-react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
+
 import { ROUTES } from '../../const/routs';
 import type { RootState } from 'src/store';
 import { logout } from '../../store/slices/authSlice';
 
-const navItems = [
+const navLinkClass = ({ isActive }: { isActive: boolean }) =>
+  `rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+    isActive
+      ? 'bg-primary/10 text-primary'
+      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+  }`;
+
+const dropdownLinkClass = ({ isActive }: { isActive: boolean }) =>
+  `block w-full rounded-md px-3 py-2 text-left text-sm ${
+    isActive
+      ? 'bg-primary/10 text-primary'
+      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+  }`;
+
+const menuGroups = [
+  {
+    label: 'Members',
+    items: [
+      { label: 'Members', to: ROUTES.ADMIN.MEMBERS },
+      {
+        label: 'Address History',
+        to: ROUTES.ADMIN.MEMBER_ADDRESS_HISTORY,
+      },
+      { label: 'Directors', to: ROUTES.ADMIN.DIRECTORS },
+      {
+        label: 'GBM Returns',
+        to: ROUTES.ADMIN.GBM_LETTER_RETURNS,
+      },
+    ],
+  },
+  {
+    label: 'Transactions',
+    items: [
+      {
+        label: 'Transactions',
+        to: ROUTES.ADMIN.TRANSACTIONS,
+      },
+      {
+        label: 'Cheque Ranges',
+        to: ROUTES.ADMIN.CHEQUE_RANGES,
+      },
+    ],
+  },
+  {
+    label: 'Master Data',
+    items: [
+      { label: 'Parties', to: ROUTES.ADMIN.PARTIES },
+      { label: 'Layouts', to: ROUTES.ADMIN.LAYOUTS },
+      { label: 'Accounts', to: ROUTES.ADMIN.ACCOUNTS },
+    ],
+  },
+];
+
+const publicNavItems = [
   { label: 'Login', to: ROUTES.ADMIN.LOGIN },
   { label: 'Register', to: ROUTES.ADMIN.REGISTER },
 ];
 
+function DropdownMenu({ label, items }: { label: string; items: { label: string; to: string }[] }) {
+  return (
+    <div className='group relative'>
+      <button
+        type='button'
+        className='flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground'
+      >
+        {label}
+        <ChevronDown className='h-4 w-4' />
+      </button>
+
+      <div className='invisible absolute left-0 top-full z-50 mt-1 w-48 rounded-md border bg-background p-1 opacity-0 shadow-md transition-all group-hover:visible group-hover:opacity-100'>
+        {items.map(item => (
+          <NavLink key={item.to} to={item.to} className={dropdownLinkClass}>
+            {item.label}
+          </NavLink>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function Header() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const isLoggedIn = useSelector((state: RootState) => state.auth.isAuthenticated);
-  const user = useSelector((state: RootState) => state.auth.user);
+
+  const { isAuthenticated, user } = useSelector((state: RootState) => state.auth);
 
   const handleSignOut = () => {
     dispatch(logout());
@@ -24,122 +100,53 @@ function Header() {
   return (
     <header className='border-b bg-background'>
       <div className='mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8'>
+        {/* Logo */}
         <Link
-          to={isLoggedIn ? ROUTES.ADMIN.ROOT : ROUTES.ADMIN.LOGIN}
+          to={isAuthenticated ? ROUTES.ADMIN.ROOT : ROUTES.ADMIN.LOGIN}
           className='flex items-center gap-3'
         >
           <div className='flex h-9 w-9 items-center justify-center rounded-lg bg-primary'>
             <Building2 className='h-5 w-5 text-primary-foreground' />
           </div>
+
           <div>
             <p className='text-sm font-semibold tracking-tight'>CSGE</p>
             <p className='text-[11px] text-muted-foreground'>Management System</p>
           </div>
         </Link>
+
         {/* Navigation */}
-        {isLoggedIn ? (
+        {isAuthenticated ? (
           <div className='flex items-center gap-3'>
             <nav className='flex items-center gap-1'>
-              <NavLink
-                to={ROUTES.ADMIN.ROOT}
-                className={({ isActive }) =>
-                  `rounded-md px-3 py-2 text-sm font-medium transition-colors ${isActive ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`
-                }
-              >
+              {/* Dashboard */}
+              <NavLink to={ROUTES.ADMIN.ROOT} className={navLinkClass}>
                 Dashboard
               </NavLink>
-              <NavLink
-                to={ROUTES.ADMIN.MEMBERS}
-                className={({ isActive }) =>
-                  `rounded-md px-3 py-2 text-sm font-medium transition-colors ${isActive ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`
-                }
-              >
-                Members
-              </NavLink>
-              <NavLink
-                to={ROUTES.ADMIN.MEMBER_ADDRESS_HISTORY}
-                className={({ isActive }) =>
-                  `rounded-md px-3 py-2 text-sm font-medium transition-colors ${isActive ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`
-                }
-              >
-                Address history
-              </NavLink>
-              <NavLink
-                to={ROUTES.ADMIN.DIRECTORS}
-                className={({ isActive }) =>
-                  `rounded-md px-3 py-2 text-sm font-medium transition-colors ${isActive ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`
-                }
-              >
-                Directors
-              </NavLink>
-              <NavLink
-                to={ROUTES.ADMIN.GBM_LETTER_RETURNS}
-                className={({ isActive }) =>
-                  `rounded-md px-3 py-2 text-sm font-medium transition-colors ${isActive ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`
-                }
-              >
-                GBM returns
-              </NavLink>
-              <NavLink
-                to={ROUTES.ADMIN.PARTIES}
-                className={({ isActive }) =>
-                  `rounded-md px-3 py-2 text-sm font-medium transition-colors ${isActive ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`
-                }
-              >
-                Parties
-              </NavLink>
-              <NavLink
-                to={ROUTES.ADMIN.LAYOUTS}
-                className={({ isActive }) =>
-                  `rounded-md px-3 py-2 text-sm font-medium transition-colors ${isActive ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`
-                }
-              >
-                Layouts
-              </NavLink>
-              <NavLink
-                to={ROUTES.ADMIN.ACCOUNTS}
-                className={({ isActive }) =>
-                  `rounded-md px-3 py-2 text-sm font-medium transition-colors ${isActive ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`
-                }
-              >
-                Accounts
-              </NavLink>
-              <NavLink
-                to={ROUTES.ADMIN.CHEQUE_RANGES}
-                className={({ isActive }) =>
-                  `rounded-md px-3 py-2 text-sm font-medium transition-colors ${isActive ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`
-                }
-              >
-                Cheque ranges
-              </NavLink>
-              <NavLink
-                to={ROUTES.ADMIN.TRANSACTIONS}
-                className={({ isActive }) =>
-                  `rounded-md px-3 py-2 text-sm font-medium transition-colors ${isActive ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`
-                }
-              >
-                Transactions
-              </NavLink>
+
+              {/* Dropdowns */}
+              {menuGroups.map(group => (
+                <DropdownMenu key={group.label} label={group.label} items={group.items} />
+              ))}
             </nav>
+
+            {/* User */}
             {user?.name && <span className='text-sm text-muted-foreground'>{user.name}</span>}
+
+            {/* Sign Out */}
             <button
               type='button'
               onClick={handleSignOut}
               className='flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground'
             >
-              <LogOut className='h-4 w-4' /> Sign Out
+              <LogOut className='h-4 w-4' />
+              Sign Out
             </button>
           </div>
         ) : (
           <nav className='flex items-center gap-1'>
-            {navItems.map(item => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                className={({ isActive }) =>
-                  `rounded-md px-3 py-2 text-sm font-medium transition-colors ${isActive ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`
-                }
-              >
+            {publicNavItems.map(item => (
+              <NavLink key={item.to} to={item.to} className={navLinkClass}>
                 {item.label}
               </NavLink>
             ))}
@@ -149,4 +156,5 @@ function Header() {
     </header>
   );
 }
+
 export default Header;

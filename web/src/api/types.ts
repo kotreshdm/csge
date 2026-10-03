@@ -189,6 +189,15 @@ export interface MemberAddressHistory {
     memberCode: string;
     name: string;
     nameKannada: string | null;
+    addressLine1: string | null;
+    addressLine2: string | null;
+    city: string | null;
+    district: string | null;
+    addressLine1Kannada: string | null;
+    addressLine2Kannada: string | null;
+    cityKannada: string | null;
+    districtKannada: string | null;
+    postalCode: string | null;
   };
 }
 
