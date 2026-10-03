@@ -8,6 +8,10 @@ export const ROUTES = {
     MEMBERS: '/admin/members',
     MEMBERS_ADD: '/admin/members/add',
     MEMBERS_EDIT: (memberId: string) => `/admin/members/${memberId}/edit`,
+    MEMBER_ADDRESS_HISTORY: '/admin/member-address-history',
+
+    DIRECTORS: '/admin/directors',
+    GBM_LETTER_RETURNS: '/admin/gbm-letter-returns',
 
     PARTIES: '/admin/parties',
     PARTIES_ADD: '/admin/parties/add',
@@ -20,6 +24,8 @@ export const ROUTES = {
     ACCOUNTS: '/admin/accounts',
     ACCOUNTS_ADD: '/admin/accounts/add',
     ACCOUNTS_EDIT: (accountId: string) => `/admin/accounts/${accountId}/edit`,
+
+    CHEQUE_RANGES: '/admin/cheque-ranges',
 
     TRANSACTIONS: '/admin/transactions',
     TRANSACTIONS_ADD: '/admin/transactions/add',

@@ -379,6 +379,29 @@ export async function getMembers(params?: {
   };
 }
 
+export async function getMemberAddressHistory() {
+  const history = await prisma.memberAddressHistory.findMany({
+    include: {
+      member: {
+        select: {
+          memberId: true,
+          memberCode: true,
+          name: true,
+          nameKannada: true,
+        },
+      },
+    },
+    orderBy: [{ memberId: "asc" }, { createdAt: "desc" }, { id: "desc" }],
+  });
+
+  return history.map((record) => ({
+    ...record,
+    id: record.id.toString(),
+    memberId: record.memberId.toString(),
+    member: { ...record.member, memberId: record.member.memberId.toString() },
+  }));
+}
+
 export async function createMember(input: Record<string, unknown>) {
   const memberCode = requiredString(
     String(input.memberCode ?? ""),
@@ -576,50 +599,92 @@ export async function updateMember(
     "Nominee date of birth",
   );
 
-  const updatedMember = await prisma.member.update({
-    where: { memberId: existingMember.memberId },
-    data: {
-      memberCode,
-      recieptNo,
-      joinDate,
-      name,
-      nameKannada,
-      careOfName: String(input.careOfName ?? "") || null,
-      careOfNameKannada: String(input.careOfNameKannada ?? "") || null,
-      mobile,
-      memberType,
-      status,
-      gender: gender ?? null,
-      addressLine1,
-      addressLine2,
-      city,
-      district,
-      addressLine1Kannada: String(input.addressLine1Kannada ?? "") || null,
-      addressLine2Kannada: String(input.addressLine2Kannada ?? "") || null,
-      cityKannada: String(input.cityKannada ?? "") || null,
-      districtKannada: String(input.districtKannada ?? "") || null,
-      postalCode: postalCode || null,
-      fatherName: String(input.fatherName ?? "") || null,
-      fatherNameKannada: String(input.fatherNameKannada ?? "") || null,
-      spouseName: String(input.spouseName ?? "") || null,
-      spouseNameKannada: String(input.spouseNameKannada ?? "") || null,
-      dob: dob ?? null,
-      alternateMobile: alternateMobile || null,
-      email: String(input.email ?? "") || null,
-      aadhaarNumber: String(input.aadhaarNumber ?? "") || null,
-      panNumber: String(input.panNumber ?? "") || null,
-      otherId: String(input.otherId ?? "") || null,
-      nomineeName: String(input.nomineeName ?? "") || null,
-      nomineeRelation: String(input.nomineeRelation ?? "") || null,
-      nomineeMobile: nomineeMobile || null,
-      nomineeEmail: String(input.nomineeEmail ?? "") || null,
-      nomineeAddress: String(input.nomineeAddress ?? "") || null,
-      nomineeDateOfBirth: nomineeDateOfBirth ?? null,
-      occupation: String(input.occupation ?? "") || null,
-      permanentAddress: String(input.permanentAddress ?? "") || null,
-      officeAddress: String(input.officeAddress ?? "") || null,
-      remarks: String(input.remarks ?? "") || null,
-    },
+  const nextAddress = {
+    addressLine1,
+    addressLine2,
+    city,
+    district,
+    addressLine1Kannada: String(input.addressLine1Kannada ?? "") || null,
+    addressLine2Kannada: String(input.addressLine2Kannada ?? "") || null,
+    cityKannada: String(input.cityKannada ?? "") || null,
+    districtKannada: String(input.districtKannada ?? "") || null,
+    postalCode: postalCode || null,
+  };
+  const addressFields = Object.keys(nextAddress) as Array<keyof typeof nextAddress>;
+  const addressChanged = addressFields.some(
+    (field) => (existingMember[field] ?? null) !== (nextAddress[field] ?? null),
+  );
+
+  const updatedMember = await prisma.$transaction(async (transaction) => {
+    if (addressChanged) {
+      const latestHistory = await transaction.memberAddressHistory.findFirst({
+        where: { memberId: existingMember.memberId },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      });
+      const startDate = latestHistory?.toDate ?? existingMember.createdAt;
+      const fromDate = new Date(
+        Date.UTC(startDate.getUTCFullYear(), startDate.getUTCMonth(), startDate.getUTCDate()),
+      );
+      const today = new Date();
+      const toDate = new Date(
+        Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()),
+      );
+
+      await transaction.memberAddressHistory.create({
+        data: {
+          memberId: existingMember.memberId,
+          addressLine1: existingMember.addressLine1,
+          addressLine2: existingMember.addressLine2,
+          city: existingMember.city,
+          district: existingMember.district,
+          addressLine1Kannada: existingMember.addressLine1Kannada,
+          addressLine2Kannada: existingMember.addressLine2Kannada,
+          cityKannada: existingMember.cityKannada,
+          districtKannada: existingMember.districtKannada,
+          postalCode: existingMember.postalCode,
+          fromDate,
+          toDate,
+        },
+      });
+    }
+
+    return transaction.member.update({
+      where: { memberId: existingMember.memberId },
+      data: {
+        memberCode,
+        recieptNo,
+        joinDate,
+        name,
+        nameKannada,
+        careOfName: String(input.careOfName ?? "") || null,
+        careOfNameKannada: String(input.careOfNameKannada ?? "") || null,
+        mobile,
+        memberType,
+        status,
+        gender: gender ?? null,
+        ...nextAddress,
+        fatherName: String(input.fatherName ?? "") || null,
+        fatherNameKannada: String(input.fatherNameKannada ?? "") || null,
+        spouseName: String(input.spouseName ?? "") || null,
+        spouseNameKannada: String(input.spouseNameKannada ?? "") || null,
+        dob: dob ?? null,
+        alternateMobile: alternateMobile || null,
+        email: String(input.email ?? "") || null,
+        aadhaarNumber: String(input.aadhaarNumber ?? "") || null,
+        panNumber: String(input.panNumber ?? "") || null,
+        otherId: String(input.otherId ?? "") || null,
+        nomineeName: String(input.nomineeName ?? "") || null,
+        nomineeRelation: String(input.nomineeRelation ?? "") || null,
+        nomineeMobile: nomineeMobile || null,
+        nomineeEmail: String(input.nomineeEmail ?? "") || null,
+        nomineeAddress: String(input.nomineeAddress ?? "") || null,
+        nomineeDateOfBirth: nomineeDateOfBirth ?? null,
+        occupation: String(input.occupation ?? "") || null,
+        permanentAddress: String(input.permanentAddress ?? "") || null,
+        officeAddress: String(input.officeAddress ?? "") || null,
+        remarks: String(input.remarks ?? "") || null,
+      },
+    });
   });
 
   return {

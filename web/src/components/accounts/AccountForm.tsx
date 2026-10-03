@@ -90,9 +90,9 @@ export default function AccountForm({
             <Input
               id='openingBalance'
               type='number'
-              step='100'
+              step='1'
               max='9999999999999.99'
-              min='-9999999999999.99'
+              min='0'
               aria-invalid={Boolean(errors.openingBalance)}
               {...register('openingBalance', {
                 required: 'Opening balance is required.',

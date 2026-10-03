@@ -79,6 +79,12 @@ model Member {
   createdAt           DateTime     @default(now())
   updatedAt           DateTime     @updatedAt
 
+
+//simply mapping
+
+directorships    Director[]
+gbmLetterReturns GbmLetterReturn[]
+addressHistory MemberAddressHistory[]
   // Transaction relations
   transactions        Transaction[] @relation("TransactionMember")
   createdTransactions Transaction[] @relation("TransactionCreatedBy")
@@ -241,6 +247,8 @@ model Account {
   updatedAt      DateTime @updatedAt
 
   // Transaction relations
+  cancelledCheques CancelledCheque[]
+  chequeRanges     ChequeRange[]
   transactionsFrom Transaction[] @relation("TransactionFromAccount")
   transactionsTo   Transaction[] @relation("TransactionToAccount")
 
@@ -422,4 +430,126 @@ model Transaction {
   @@index([referenceTransactionId])
 
   @@index([transactionDate])
+}
+
+model CancelledCheque {
+  id            BigInt   @id @default(autoincrement())
+
+  accountId     BigInt
+  chequeNo      String
+  cancelledDate DateTime @db.Date
+  reason        String?
+  remarks       String?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  account Account @relation(fields: [accountId], references: [id])
+
+  @@unique([accountId, chequeNo])
+  @@index([chequeNo])
+  @@index([cancelledDate])
+  @@map("cancelled_cheques")
+}
+model CancelledReceipt {
+  id            BigInt   @id @default(autoincrement())
+
+  receiptNo     String
+  cancelledDate DateTime @db.Date
+  reason        String?
+  remarks       String?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([receiptNo])
+  @@index([cancelledDate])
+  @@map("cancelled_receipts")
+}
+model Director {
+  id        BigInt   @id @default(autoincrement())
+
+  memberId  BigInt
+  position  String
+  quota     String
+  term      Int
+  fromDate  DateTime @db.Date
+  toDate    DateTime? @db.Date
+  remarks   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  member Member @relation(fields: [memberId], references: [memberId])
+
+  @@index([memberId])
+  @@index([fromDate, toDate])
+  @@map("directors")
+}
+model GbmLetterReturn {
+  id            BigInt   @id @default(autoincrement())
+
+  memberId      BigInt
+  gbmDate       DateTime @db.Date
+  letterDate    DateTime? @db.Date
+  returnDate    DateTime @db.Date
+  returnReason  String?
+  remarks       String?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  member Member @relation(fields: [memberId], references: [memberId])
+
+  @@index([memberId, gbmDate])
+  @@index([returnDate])
+  @@map("gbm_letter_returns")
+}
+
+model ChequeRange {
+  id            BigInt   @id @default(autoincrement())
+
+  accountId     BigInt
+  startChequeNo String
+  endChequeNo   String
+  receivedDate  DateTime @db.Date
+  remarks       String?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  account Account @relation(fields: [accountId], references: [id])
+
+  @@index([accountId])
+  @@index([startChequeNo, endChequeNo])
+  @@index([receivedDate])
+  @@map("cheque_ranges")
+}
+
+model MemberAddressHistory {
+  id           BigInt   @id @default(autoincrement())
+
+  memberId     BigInt
+
+  addressLine1 String?
+  addressLine2 String?
+  city         String?
+  district     String?
+  addressLine1Kannada String?
+  addressLine2Kannada String?
+  cityKannada  String?
+  districtKannada String?
+  postalCode   String?
+
+  fromDate     DateTime @db.Date
+  toDate       DateTime? @db.Date
+
+  createdAt    DateTime @default(now())
+
+  member Member @relation(fields: [memberId], references: [memberId])
+
+  @@index([memberId, fromDate])
+  @@index([memberId, toDate])
+  @@index([city])
+  @@map("member_address_history")
 }

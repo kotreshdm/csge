@@ -191,6 +191,8 @@ export default function TransactionFormPage({ mode }: TransactionFormPageProps) 
           previous.cashbookPage === ''
             ? (lastTransaction.cashbookPage ?? '')
             : previous.cashbookPage,
+        chequeDate:
+          previous.chequeDate ?? lastTransaction.transactionDate?.slice(0, 10) ?? null,
       }),
     );
   }, [isEditing, transactionListData]);

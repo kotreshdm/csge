@@ -4,12 +4,21 @@ import { AppError } from "../utils/AppError.js";
 import { sendSuccess } from "../utils/response.js";
 import {
   createMember,
+  getMemberAddressHistory,
   getMembers,
   updateMember,
   uploadMembersFromFile,
 } from "../services/memberService.js";
 
 export const memberController = {
+  getAddressHistory: async (_request: FastifyRequest, reply: FastifyReply) =>
+    sendSuccess(
+      reply,
+      200,
+      "Member address history fetched successfully.",
+      { items: await getMemberAddressHistory() },
+    ),
+
   getMembers: async (request: FastifyRequest, reply: FastifyReply) => {
     const query = (request.query ?? {}) as Record<string, unknown>;
 

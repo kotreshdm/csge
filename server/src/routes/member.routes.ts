@@ -6,6 +6,7 @@ import { memberController } from "../controllers/memberController.js";
 export default async function memberRoutes(app: FastifyInstance) {
   app.addHook("preValidation", requireAuth);
 
+  app.get("/address-history", memberController.getAddressHistory);
   app.get("/", memberController.getMembers);
   app.post("/", memberController.createMember);
   app.put("/:id", memberController.updateMember);

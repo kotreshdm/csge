@@ -11,7 +11,6 @@ import {
   MEMBER_VISIBLE_TYPES,
   LAYOUT_VISIBLE_TYPES,
   TRANSACTION_DIRECTIONS,
-  VALID_DIRECTIONS_BY_TYPE,
   VALID_TYPES_BY_DIRECTION,
 } from './transactionConstants';
 
@@ -60,11 +59,6 @@ export function blankTransaction(memberId = ''): TransactionPayload {
   };
 }
 
-export function getAllowedDirections(type: string): readonly TransactionPayload['direction'][] {
-  return (VALID_DIRECTIONS_BY_TYPE[type as keyof typeof VALID_DIRECTIONS_BY_TYPE] ??
-    TRANSACTION_DIRECTIONS) as readonly TransactionPayload['direction'][];
-}
-
 export function getAllowedTypes(direction: string): readonly TransactionPayload['type'][] {
   return (VALID_TYPES_BY_DIRECTION[direction as keyof typeof VALID_TYPES_BY_DIRECTION] ??
     TRANSACTION_TYPES) as readonly TransactionPayload['type'][];
@@ -109,12 +103,40 @@ export function isLayoutTransfer(form: TransactionPayload) {
   return form.type === 'LAYOUT' && form.direction === 'TRANSFER';
 }
 
+function normalizePartyType(partyType: string) {
+  return partyType
+    .trim()
+    .toLocaleUpperCase()
+    .replace(/[\s_-]+/g, '');
+}
+
+function filterPartyTypes(
+  parties: Array<{ id: string; name: string; partyType: string }>,
+  allowedPartyTypes: readonly string[],
+) {
+  const allowed = new Set(allowedPartyTypes.map(normalizePartyType));
+  return parties.filter(party => allowed.has(normalizePartyType(party.partyType)));
+}
+
+const EXPENSE_EXCLUDED_PARTY_TYPES = [
+  'EMPLOYEE',
+  'DEVELOPER',
+  'DIRECTOR',
+  'PRESIDENT',
+  'CHIEF PROMOTER',
+  'SECRETARY',
+];
+
 export function getFilteredParties(
   parties: Array<{ id: string; name: string; partyType: string }>,
   form: TransactionPayload,
 ) {
   if (!isPartyVisible(form.type)) {
     return [];
+  }
+
+  if (form.type === 'OTHER') {
+    return parties;
   }
 
   const preferred = (() => {
@@ -131,6 +153,10 @@ export function getFilteredParties(
       return PARTY_TYPE_MATCHERS.ADVANCE_DEVELOPER_ADVANCE;
     if (form.type === 'ADVANCE' && form.subType === 'DEVELOPER_ADVANCE_RETURN')
       return PARTY_TYPE_MATCHERS.ADVANCE_DEVELOPER_ADVANCE;
+    if (form.type === 'ADVANCE' && form.subType === 'EMPLOYEE_SECURITY_DEPOSIT')
+      return PARTY_TYPE_MATCHERS.ADVANCE_EMPLOYEE_ADVANCE;
+    if (form.type === 'ADVANCE' && form.subType === 'EMPLOYEE_SECURITY_DEPOSIT_RETURN')
+      return PARTY_TYPE_MATCHERS.ADVANCE_EMPLOYEE_ADVANCE;
     if (form.type === 'ADVANCE' && form.subType === 'PRESIDENT_ADVANCE')
       return PARTY_TYPE_MATCHERS.ADVANCE_DIRECTOR_ADVANCE;
     if (form.type === 'ADVANCE' && form.subType === 'PRESIDENT_ADVANCE_RETURN')
@@ -148,11 +174,16 @@ export function getFilteredParties(
       return PARTY_TYPE_MATCHERS.ASSET_BUILDING_ADVANCE;
     if (form.type === 'ASSET' && form.subType === 'FURNITURE')
       return PARTY_TYPE_MATCHERS.ASSET_FURNITURE;
+    if (form.type === 'EXPENSE') return [];
     return PARTY_TYPE_MATCHERS.OTHER;
   })();
 
-  const allowed = new Set(preferred);
-  return parties.filter(party => !allowed.size || allowed.has(party.partyType));
+  if (form.type === 'EXPENSE' && preferred.length === 0) {
+    const excluded = new Set(EXPENSE_EXCLUDED_PARTY_TYPES.map(normalizePartyType));
+    return parties.filter(party => !excluded.has(normalizePartyType(party.partyType)));
+  }
+
+  return filterPartyTypes(parties, preferred);
 }
 
 export function calculateTotalAmount(form: TransactionPayload) {
@@ -296,9 +327,8 @@ export function normalizeTransaction(form: TransactionPayload): TransactionPaylo
     next.type = 'OTHER';
   }
 
-  const allowedDirections = getAllowedDirections(next.type);
-  if (!allowedDirections.includes(next.direction)) {
-    next.direction = allowedDirections[0] ?? 'IN';
+  if (!TRANSACTION_DIRECTIONS.includes(next.direction)) {
+    next.direction = 'IN';
   }
 
   const allowedTypes = getAllowedTypes(next.direction);

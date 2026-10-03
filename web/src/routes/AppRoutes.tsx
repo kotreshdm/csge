@@ -7,6 +7,7 @@ import Register from '../pages/Register';
 import AddTransaction from '../pages/transactions/AddTransaction';
 import EditTransaction from '../pages/transactions/EditTransaction';
 import Transactions from '../pages/transactions/TransactionsList';
+import ChequeRanges from '../pages/chequeRanges/ChequeRanges';
 import type { JSX } from 'react/jsx-runtime';
 
 function hasAccessToken() {
@@ -38,6 +39,14 @@ export default function AppRoutes() {
         element={
           <ProtectedRoute>
             <Transactions />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path={ROUTES.ADMIN.CHEQUE_RANGES}
+        element={
+          <ProtectedRoute>
+            <ChequeRanges />
           </ProtectedRoute>
         }
       />

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -33,6 +33,7 @@ function errorMessage(error: unknown, fallback: string) {
 }
 
 export default function EditLayout() {
+  const navigate = useNavigate();
   const { id = '' } = useParams();
   const queryClient = useQueryClient();
   const { data, isLoading, error } = useQuery({
@@ -54,9 +55,11 @@ export default function EditLayout() {
     setIsSubmitting(true);
     setSubmitMessage(null);
     try {
-      await updateLayout(id, payload);
+      const response = await updateLayout(id, payload);
       await queryClient.invalidateQueries({ queryKey: ['layouts'] });
-      toast.success('Layout updated.');
+      navigate(ROUTES.ADMIN.LAYOUTS, {
+        state: { message: response.message || 'Layout updated.' },
+      });
     } catch (submitError) {
       setSubmitMessage({
         type: 'error',

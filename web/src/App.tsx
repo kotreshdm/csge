@@ -11,6 +11,9 @@ import Register from './pages/Register';
 import Members from './pages/members/Members';
 import AddMember from './pages/members/AddMember';
 import EditMember from './pages/members/EditMember';
+import MemberAddressHistoryPage from './pages/members/MemberAddressHistory';
+import Directors from './pages/directors/Directors';
+import GbmLetterReturns from './pages/gbmLetterReturns/GbmLetterReturns';
 import type { RootState } from './store';
 import Parties from './pages/parties/Parties';
 import AddParty from './pages/parties/AddParty';
@@ -21,6 +24,7 @@ import EditLayout from './pages/layouts/EditLayout';
 import Accounts from './pages/accounts/Accounts';
 import AddAccount from './pages/accounts/AddAccount';
 import EditAccount from './pages/accounts/EditAccount';
+import ChequeRanges from './pages/chequeRanges/ChequeRanges';
 import Transactions from './pages/transactions/TransactionsList';
 import AddTransaction from './pages/transactions/AddTransaction';
 import EditTransaction from './pages/transactions/EditTransaction';
@@ -94,6 +98,33 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <EditMember />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path={ROUTES.ADMIN.MEMBER_ADDRESS_HISTORY}
+            element={
+              <ProtectedRoute>
+                <MemberAddressHistoryPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path={ROUTES.ADMIN.DIRECTORS}
+            element={
+              <ProtectedRoute>
+                <Directors />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path={ROUTES.ADMIN.GBM_LETTER_RETURNS}
+            element={
+              <ProtectedRoute>
+                <GbmLetterReturns />
               </ProtectedRoute>
             }
           />
@@ -175,6 +206,15 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <EditAccount />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path={ROUTES.ADMIN.CHEQUE_RANGES}
+            element={
+              <ProtectedRoute>
+                <ChequeRanges />
               </ProtectedRoute>
             }
           />

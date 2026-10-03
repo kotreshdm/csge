@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { Link, useLocation, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft } from 'lucide-react';
 
 import { ROUTES } from '../../const/routs';
@@ -10,6 +11,8 @@ import MemberForm, {
 } from '../../components/members/MemberForm';
 
 export default function EditMember() {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { id } = useParams();
   const { state } = useLocation() as { state?: { member?: Record<string, unknown> } };
   const member = state?.member;
@@ -54,9 +57,12 @@ export default function EditMember() {
 
     try {
       const response = await updateMember(String(id ?? ''), values);
-      setSubmitMessage({
-        type: 'success',
-        message: response.message || 'Member updated successfully.',
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['members'] }),
+        queryClient.invalidateQueries({ queryKey: ['member-address-history'] }),
+      ]);
+      navigate(ROUTES.ADMIN.MEMBERS, {
+        state: { message: response.message || 'Member updated successfully.' },
       });
     } catch (error) {
       const message =

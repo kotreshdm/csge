@@ -111,6 +111,144 @@ export interface AccountPayload {
   isActive: boolean;
 }
 
+export interface Director {
+  id: string;
+  memberId: string;
+  position: string;
+  quota: string;
+  term: number;
+  fromDate: string;
+  toDate: string | null;
+  remarks: string | null;
+  createdAt: string;
+  updatedAt: string;
+  member: {
+    memberId: string;
+    memberCode: string;
+    name: string;
+    nameKannada: string | null;
+    status: string;
+  };
+}
+
+export interface DirectorPayload {
+  memberId: string;
+  position: string;
+  quota: string;
+  term: number;
+  fromDate: string;
+  toDate: string;
+  remarks: string;
+}
+
+export interface GbmLetterReturn {
+  id: string;
+  memberId: string;
+  gbmDate: string;
+  letterDate: string | null;
+  returnDate: string;
+  returnReason: string | null;
+  remarks: string | null;
+  createdAt: string;
+  updatedAt: string;
+  member: {
+    memberId: string;
+    memberCode: string;
+    name: string;
+    nameKannada: string | null;
+    status: string;
+  };
+}
+
+export interface GbmLetterReturnPayload {
+  memberId: string;
+  gbmDate: string;
+  letterDate: string;
+  returnDate: string;
+  returnReason: string;
+  remarks: string;
+}
+
+export interface MemberAddressHistory {
+  id: string;
+  memberId: string;
+  addressLine1: string | null;
+  addressLine2: string | null;
+  city: string | null;
+  district: string | null;
+  addressLine1Kannada: string | null;
+  addressLine2Kannada: string | null;
+  cityKannada: string | null;
+  districtKannada: string | null;
+  postalCode: string | null;
+  fromDate: string;
+  toDate: string | null;
+  createdAt: string;
+  member: {
+    memberId: string;
+    memberCode: string;
+    name: string;
+    nameKannada: string | null;
+  };
+}
+
+export interface ChequeRange {
+  id: string;
+  accountId: string;
+  startChequeNo: string;
+  endChequeNo: string;
+  receivedDate: string;
+  remarks: string | null;
+  createdAt: string;
+  updatedAt: string;
+  account: Pick<Account, 'id' | 'accountCode' | 'name'>;
+}
+
+export interface ChequeRangePayload {
+  accountId: string;
+  startChequeNo: string;
+  endChequeNo: string;
+  receivedDate: string;
+  remarks: string;
+}
+
+export interface CancelledCheque {
+  id: string;
+  accountId: string;
+  chequeNo: string;
+  cancelledDate: string;
+  reason: string | null;
+  remarks: string | null;
+  createdAt: string;
+  updatedAt: string;
+  account: Pick<Account, 'id' | 'accountCode' | 'name'>;
+}
+
+export interface CancelledChequePayload {
+  accountId: string;
+  chequeNo: string;
+  cancelledDate: string;
+  reason: string;
+  remarks: string;
+}
+
+export interface CancelledReceipt {
+  id: string;
+  receiptNo: string;
+  cancelledDate: string;
+  reason: string | null;
+  remarks: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CancelledReceiptPayload {
+  receiptNo: string;
+  cancelledDate: string;
+  reason: string;
+  remarks: string;
+}
+
 export interface Transaction {
   id: string;
   cashbookNo: number | null;

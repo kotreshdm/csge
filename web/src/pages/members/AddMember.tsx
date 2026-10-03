@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, FileSpreadsheet, Upload, UserPlus } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
@@ -14,6 +15,7 @@ import MemberForm, {
 
 export default function AddMember() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<'single' | 'excel'>('single');
   const [excelUploadMessage, setExcelUploadMessage] = useState<{
     type: 'success' | 'error';
@@ -34,11 +36,10 @@ export default function AddMember() {
 
     try {
       const response = await createMember(values);
-      setSubmitMessage({
-        type: 'success',
-        message: response.message || 'Member created successfully.',
+      await queryClient.invalidateQueries({ queryKey: ['members'] });
+      navigate(ROUTES.ADMIN.MEMBERS, {
+        state: { message: response.message || 'Member created successfully.' },
       });
-      navigate(ROUTES.ADMIN.MEMBERS);
     } catch (error) {
       const message =
         error && typeof error === 'object' && 'message' in error
@@ -130,10 +131,9 @@ export default function AddMember() {
 
     try {
       const response = await uploadMembersFile(selectedExcelFile);
-
-      setExcelUploadMessage({
-        type: 'success',
-        message: response.message || 'Members file submitted successfully.',
+      await queryClient.invalidateQueries({ queryKey: ['members'] });
+      navigate(ROUTES.ADMIN.MEMBERS, {
+        state: { message: response.message || 'Members file submitted successfully.' },
       });
     } catch (error) {
       const message =

@@ -57,6 +57,30 @@ function Header() {
                 Members
               </NavLink>
               <NavLink
+                to={ROUTES.ADMIN.MEMBER_ADDRESS_HISTORY}
+                className={({ isActive }) =>
+                  `rounded-md px-3 py-2 text-sm font-medium transition-colors ${isActive ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`
+                }
+              >
+                Address history
+              </NavLink>
+              <NavLink
+                to={ROUTES.ADMIN.DIRECTORS}
+                className={({ isActive }) =>
+                  `rounded-md px-3 py-2 text-sm font-medium transition-colors ${isActive ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`
+                }
+              >
+                Directors
+              </NavLink>
+              <NavLink
+                to={ROUTES.ADMIN.GBM_LETTER_RETURNS}
+                className={({ isActive }) =>
+                  `rounded-md px-3 py-2 text-sm font-medium transition-colors ${isActive ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`
+                }
+              >
+                GBM returns
+              </NavLink>
+              <NavLink
                 to={ROUTES.ADMIN.PARTIES}
                 className={({ isActive }) =>
                   `rounded-md px-3 py-2 text-sm font-medium transition-colors ${isActive ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`
@@ -79,6 +103,14 @@ function Header() {
                 }
               >
                 Accounts
+              </NavLink>
+              <NavLink
+                to={ROUTES.ADMIN.CHEQUE_RANGES}
+                className={({ isActive }) =>
+                  `rounded-md px-3 py-2 text-sm font-medium transition-colors ${isActive ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`
+                }
+              >
+                Cheque ranges
               </NavLink>
               <NavLink
                 to={ROUTES.ADMIN.TRANSACTIONS}
