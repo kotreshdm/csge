@@ -1,9 +1,5 @@
-import {
-  PaymentMode,
-  Prisma,
-  TransactionDirection,
-  TransactionType,
-} from "@prisma/client";
+import { randomUUID } from "node:crypto";
+import { PaymentMode, Prisma, TransactionType } from "@prisma/client";
 
 import prisma from "../db/prisma.js";
 import { AppError } from "../utils/AppError.js";
@@ -11,6 +7,7 @@ import {
   optionalDate,
   optionalString,
   requiredDate,
+  requiredString,
 } from "../utils/validation.js";
 
 type TransactionInput = Record<string, unknown>;
@@ -22,17 +19,7 @@ function formatLocalDateInput(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
-const directions = ["IN", "OUT"] as const;
-const transactionTypes = [
-  "SHARE",
-  "LAYOUT",
-  "BANK",
-  "EXPENSE",
-  "INCOME",
-  "ADVANCE",
-  "ASSET",
-  "OTHER",
-] as const;
+const transactionTypes = ["CREDIT", "DEBIT"] as const;
 const paymentModes = [
   "CASH",
   "CHEQUE",
@@ -40,6 +27,55 @@ const paymentModes = [
   "UPI",
   "OTHER",
 ] as const;
+const amountFields = [
+  "shareAmount",
+  "shareFeeAmount",
+  "applicationFeeAmount",
+  "admissionFeeAmount",
+  "membershipFeeAmount",
+  "siteDepositAmount",
+  "welfareFundAmount",
+  "booksFormsAmount",
+  "miscellaneousAmount",
+  "otherAmount",
+] as const;
+
+function optionalInteger(value: unknown, fieldName: string): number | null {
+  if (value === undefined || value === null || value === "") return null;
+  if (typeof value !== "string" && typeof value !== "number") {
+    throw new AppError(400, `${fieldName} must be a positive whole number.`);
+  }
+  const text = String(value);
+  if (!/^\d+$/.test(text)) {
+    throw new AppError(400, `${fieldName} must be a positive whole number.`);
+  }
+  const parsed = Number(text);
+  if (!Number.isSafeInteger(parsed) || parsed <= 0 || parsed > 2147483647) {
+    throw new AppError(400, `${fieldName} must be a positive whole number.`);
+  }
+  return parsed;
+}
+
+const acceptedInputFields = new Set([
+  "transactionDate",
+  "cashbookNo",
+  "cashbookPage",
+  "type",
+  "subType",
+  "memberId",
+  "partyId",
+  "layoutId",
+  ...amountFields,
+  "totalAmount",
+  "receiptNo",
+  "paymentMode",
+  "chequeNo",
+  "chequeDate",
+  "bankReferenceNo",
+  "remarks",
+  "createdBy",
+  "updatedBy",
+]);
 
 function parseId(value: unknown, fieldName: string): bigint | null {
   if (value === undefined || value === null || value === "") return null;
@@ -64,23 +100,6 @@ function requiredId(value: unknown, fieldName: string): bigint {
   return id;
 }
 
-function optionalInt(value: unknown, fieldName: string): number | null {
-  if (value === undefined || value === null || value === "") return null;
-  if (typeof value !== "string" && typeof value !== "number") {
-    throw new AppError(400, `${fieldName} must be a valid integer.`);
-  }
-
-  const parsed = Number(value);
-  if (
-    !Number.isInteger(parsed) ||
-    parsed < -2147483648 ||
-    parsed > 2147483647
-  ) {
-    throw new AppError(400, `${fieldName} must be a valid integer.`);
-  }
-  return parsed;
-}
-
 function enumValue<T extends string>(
   value: unknown,
   fieldName: string,
@@ -100,8 +119,9 @@ function optionalEnum<T extends string>(
   return enumValue(value, fieldName, values);
 }
 
-function amount(value: unknown, fieldName: string, precision: 10 | 15) {
-  const rawValue = value ?? "0";
+function amount(value: unknown, fieldName: string) {
+  const rawValue =
+    value === undefined || value === null || value === "" ? "0" : value;
   if (typeof rawValue !== "string" && typeof rawValue !== "number") {
     throw new AppError(400, `${fieldName} must be a valid amount.`);
   }
@@ -113,108 +133,63 @@ function amount(value: unknown, fieldName: string, precision: 10 | 15) {
     throw new AppError(400, `${fieldName} must be a valid amount.`);
   }
 
-  const maxExclusive = precision === 10 ? "100000000" : "10000000000000";
+  const maxExclusive = "10000000000000";
   if (
     !parsed.isFinite() ||
     parsed.decimalPlaces() > 2 ||
+    parsed.isNegative() ||
     parsed.abs().greaterThanOrEqualTo(maxExclusive)
   ) {
     throw new AppError(
       400,
-      `${fieldName} must fit a ${precision}-digit amount with at most 2 decimals.`,
+      `${fieldName} must be non-negative and fit a 15-digit amount with at most 2 decimals.`,
     );
   }
   return parsed;
 }
 
-function transactionData(input: TransactionInput) {
-  const direction = enumValue<TransactionDirection>(
-    input.direction,
-    "Direction",
-    directions,
+function validateInputFields(input: TransactionInput) {
+  const unknownFields = Object.keys(input).filter(
+    (field) => !acceptedInputFields.has(field),
   );
-  const type = enumValue<TransactionType>(input.type, "Type", transactionTypes);
-  const shareAmount = amount(input.shareAmount, "Share amount", 10);
-  const shareFeeAmount = amount(input.shareFeeAmount, "Share fee amount", 10);
-  const membershipFeeAmount = amount(
-    input.membershipFeeAmount,
-    "Membership fee amount",
-    10,
-  );
-  const siteDepositAmount =
-    type === "SHARE"
-      ? new Prisma.Decimal(0)
-      : amount(input.siteDepositAmount, "Site deposit amount", 10);
-  const welfareFundAmount = amount(
-    input.welfareFundAmount,
-    "Welfare fund amount",
-    10,
-  );
-  const booksFormsAmount = amount(
-    input.booksFormsAmount,
-    "Books/forms amount",
-    10,
-  );
-  const miscellaneousAmount = amount(
-    input.miscellaneousAmount,
-    "Miscellaneous amount",
-    10,
-  );
-  const otherAmount = amount(input.otherAmount, "Other amount", 10);
-  const totalAmount = amount(
-    [
-      shareAmount,
-      shareFeeAmount,
-      membershipFeeAmount,
-      siteDepositAmount,
-      welfareFundAmount,
-      booksFormsAmount,
-      miscellaneousAmount,
-      otherAmount,
-    ]
-      .reduce(
-        (total, component) => total.plus(component),
-        new Prisma.Decimal(0),
-      )
-      .toString(),
-    "Total amount",
-    15,
-  );
-
-  const subType = optionalString(input.subType, "Sub-type") ?? "";
-  if (
-    ["EXPENSE", "INCOME", "ADVANCE", "ASSET", "OTHER"].includes(type) &&
-    !subType
-  ) {
-    throw new AppError(400, "Sub-type is required.");
+  if (unknownFields.length) {
+    throw new AppError(
+      400,
+      `Unsupported transaction field: ${unknownFields[0]}.`,
+    );
   }
+}
 
-  const accountId =
-    type === "BANK" ? parseId(input.accountId, "Account ID") : null;
-  if (type === "BANK" && accountId === null) {
-    throw new AppError(400, "Account is required for bank transactions.");
+function transactionData(input: TransactionInput) {
+  validateInputFields(input);
+  const type = enumValue<TransactionType>(input.type, "Type", transactionTypes);
+  const subType = requiredString(input.subType, "Sub-type");
+  const amounts = Object.fromEntries(
+    amountFields.map((field) => [field, amount(input[field], field)]),
+  ) as Record<(typeof amountFields)[number], Prisma.Decimal>;
+  const calculatedTotal = amountFields.reduce(
+    (total, field) => total.plus(amounts[field]),
+    new Prisma.Decimal(0),
+  );
+  const suppliedTotal = amount(input.totalAmount, "Total amount");
+  if (!calculatedTotal.equals(suppliedTotal)) {
+    throw new AppError(
+      400,
+      "Total amount must equal the sum of all amount fields.",
+    );
   }
 
   return {
-    cashbookNo: optionalInt(input.cashbookNo, "Cashbook number"),
-    cashbookPage: optionalInt(input.cashbookPage, "Cashbook page"),
     transactionDate: requiredDate(input.transactionDate, "Transaction date"),
-    direction,
+    cashbookNo: optionalInteger(input.cashbookNo, "Cashbook number"),
+    cashbookPage: optionalInteger(input.cashbookPage, "Cashbook page"),
     type,
     subType,
     memberId: parseId(input.memberId, "Member ID"),
     partyId: parseId(input.partyId, "Party ID"),
     layoutId: parseId(input.layoutId, "Layout ID"),
-    accountId,
-    shareAmount,
-    shareFeeAmount,
-    membershipFeeAmount,
-    siteDepositAmount,
-    welfareFundAmount,
-    booksFormsAmount,
-    miscellaneousAmount,
-    otherAmount,
-    totalAmount,
+    ...amounts,
+    totalAmount: calculatedTotal,
     receiptNo: optionalString(input.receiptNo, "Receipt number"),
     paymentMode: optionalEnum<PaymentMode>(
       input.paymentMode,
@@ -227,16 +202,19 @@ function transactionData(input: TransactionInput) {
       input.bankReferenceNo,
       "Bank reference number",
     ),
-    referenceTransactionId: parseId(
-      input.referenceTransactionId,
-      "Reference transaction ID",
-    ),
-    description: optionalString(input.description, "Description"),
     remarks: optionalString(input.remarks, "Remarks"),
   };
 }
 
-type TransactionRecord = Prisma.TransactionGetPayload<Record<string, never>>;
+const transactionRelations = {
+  member: { select: { memberId: true, memberCode: true, name: true } },
+  party: { select: { id: true, name: true, partyType: true } },
+  layout: { select: { id: true, layoutCode: true, name: true } },
+} satisfies Prisma.TransactionInclude;
+
+type TransactionRecord = Prisma.TransactionGetPayload<{
+  include: typeof transactionRelations;
+}>;
 
 function serializeTransaction(transaction: TransactionRecord) {
   return {
@@ -246,23 +224,30 @@ function serializeTransaction(transaction: TransactionRecord) {
       ? formatLocalDateInput(transaction.chequeDate)
       : null,
     id: transaction.id.toString(),
+    transactionNo: transaction.transactionNo,
     memberId: transaction.memberId?.toString() ?? null,
     partyId: transaction.partyId?.toString() ?? null,
     layoutId: transaction.layoutId?.toString() ?? null,
-    accountId: transaction.accountId?.toString() ?? null,
-    referenceTransactionId:
-      transaction.referenceTransactionId?.toString() ?? null,
-    createdBy: transaction.createdBy.toString(),
+    createdBy: transaction.createdBy?.toString() ?? null,
     updatedBy: transaction.updatedBy?.toString() ?? null,
-    shareAmount: transaction.shareAmount.toString(),
-    shareFeeAmount: transaction.shareFeeAmount.toString(),
-    membershipFeeAmount: transaction.membershipFeeAmount.toString(),
-    siteDepositAmount: transaction.siteDepositAmount.toString(),
-    welfareFundAmount: transaction.welfareFundAmount.toString(),
-    booksFormsAmount: transaction.booksFormsAmount.toString(),
-    miscellaneousAmount: transaction.miscellaneousAmount.toString(),
-    otherAmount: transaction.otherAmount.toString(),
+    createdAt: transaction.createdAt.toISOString(),
+    updatedAt: transaction.updatedAt.toISOString(),
+    ...Object.fromEntries(
+      amountFields.map((field) => [field, transaction[field].toString()]),
+    ),
     totalAmount: transaction.totalAmount.toString(),
+    member: transaction.member
+      ? {
+          ...transaction.member,
+          memberId: transaction.member.memberId.toString(),
+        }
+      : null,
+    party: transaction.party
+      ? { ...transaction.party, id: transaction.party.id.toString() }
+      : null,
+    layout: transaction.layout
+      ? { ...transaction.layout, id: transaction.layout.id.toString() }
+      : null,
   };
 }
 
@@ -294,6 +279,7 @@ function parseTransactionId(id: string): bigint {
 export async function getTransactions() {
   const transactions = await prisma.transaction.findMany({
     orderBy: [{ transactionDate: "desc" }, { id: "desc" }],
+    include: transactionRelations,
   });
   return transactions.map(serializeTransaction);
 }
@@ -301,6 +287,7 @@ export async function getTransactions() {
 export async function getTransaction(id: string) {
   const transaction = await prisma.transaction.findUnique({
     where: { id: parseTransactionId(id) },
+    include: transactionRelations,
   });
   if (!transaction) throw new AppError(404, "Transaction not found.");
   return serializeTransaction(transaction);
@@ -308,12 +295,13 @@ export async function getTransaction(id: string) {
 
 export async function createTransaction(input: TransactionInput) {
   const data = transactionData(input);
-  const createdBy = requiredId(input.createdBy, "Created by member ID");
+  const createdBy = parseId(input.createdBy, "Created by member ID");
 
   try {
     return serializeTransaction(
       await prisma.transaction.create({
-        data: { ...data, createdBy },
+        data: { ...data, transactionNo: `TXN-${randomUUID()}`, createdBy },
+        include: transactionRelations,
       }),
     );
   } catch (error) {
@@ -330,6 +318,7 @@ export async function updateTransaction(id: string, input: TransactionInput) {
       await prisma.transaction.update({
         where: { id: parseTransactionId(id) },
         data: { ...data, updatedBy },
+        include: transactionRelations,
       }),
     );
   } catch (error) {

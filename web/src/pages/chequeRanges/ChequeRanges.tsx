@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { getAccounts } from '../../api/accounts';
+import { getParties } from '../../api/parties';
 import { getTransactions } from '../../api/transactions';
 import {
   createCancelledCheque,
@@ -66,11 +66,12 @@ export default function ChequeRanges() {
     queryKey: ['cancelled-receipts'],
     queryFn: getCancelledReceipts,
   });
-  const accountsQuery = useQuery({ queryKey: ['accounts'], queryFn: getAccounts });
+  const partiesQuery = useQuery({ queryKey: ['parties'], queryFn: getParties });
   const transactionsQuery = useQuery({ queryKey: ['transactions'], queryFn: getTransactions });
   const ranges = rangesQuery.data?.data.items ?? [];
   const cancelledCheques = cancelledQuery.data?.data.items ?? [];
   const cancelledReceipts = receiptsQuery.data?.data.items ?? [];
+  const parties = partiesQuery.data?.data.items ?? [];
   const transactions = transactionsQuery.data?.data.items ?? [];
   const lastTransaction = transactions.reduce<(typeof transactions)[number] | null>(
     (latest, transaction) =>
@@ -79,13 +80,6 @@ export default function ChequeRanges() {
   );
   const defaultCancelledDate =
     lastTransaction?.transactionDate.slice(0, 10) ?? new Date().toISOString().slice(0, 10);
-  const accounts = (accountsQuery.data?.data.items ?? []).filter(
-    account =>
-      account.isActive ||
-      account.id === editingRange?.accountId ||
-      account.id === editingCancelled?.accountId,
-  );
-
   const clearEditor = () => {
     setRangeFormOpen(false);
     setCancelledFormOpen(false);
@@ -262,25 +256,25 @@ export default function ChequeRanges() {
               <p className='rounded-lg border border-slate-200 bg-white p-5 text-sm text-slate-500'>
                 Loading latest transaction date...
               </p>
-            ) : mode !== 'receipts' && accountsQuery.isLoading ? (
+            ) : mode !== 'receipts' && partiesQuery.isLoading ? (
               <p className='rounded-lg border border-slate-200 bg-white p-5 text-sm text-slate-500'>
-                Loading accounts...
+                Loading parties...
               </p>
-            ) : mode !== 'receipts' && accountsQuery.error ? (
+            ) : mode !== 'receipts' && partiesQuery.error ? (
               <p
                 role='alert'
                 className='rounded-lg border border-slate-200 bg-white p-5 text-sm text-rose-700'
               >
-                Unable to load accounts.
+                Unable to load parties.
               </p>
             ) : mode === 'ranges' ? (
               <ChequeRangeForm
                 key={editingRange?.id ?? 'new-range'}
-                accounts={accounts}
+                parties={parties}
                 defaultValues={
                   editingRange
                     ? {
-                        accountId: editingRange.accountId,
+                        partyId: editingRange.partyId,
                         startChequeNo: editingRange.startChequeNo,
                         endChequeNo: editingRange.endChequeNo,
                         receivedDate: editingRange.receivedDate.slice(0, 10),
@@ -297,18 +291,18 @@ export default function ChequeRanges() {
             ) : mode === 'cancelled' ? (
               <CancelledChequeForm
                 key={editingCancelled?.id ?? 'new-cancelled-cheque'}
-                accounts={accounts}
+                parties={parties}
                 defaultValues={
                   editingCancelled
                     ? {
-                        accountId: editingCancelled.accountId,
+                        partyId: editingCancelled.partyId,
                         chequeNo: editingCancelled.chequeNo,
                         cancelledDate: editingCancelled.cancelledDate.slice(0, 10),
                         reason: editingCancelled.reason ?? '',
                         remarks: editingCancelled.remarks ?? '',
                       }
                     : {
-                        accountId: '',
+                        partyId: '',
                         chequeNo: '',
                         cancelledDate: defaultCancelledDate,
                         reason: '',
@@ -377,7 +371,7 @@ export default function ChequeRanges() {
               <table className='min-w-full text-left text-sm'>
                 <thead className='bg-slate-50 text-slate-600'>
                   <tr className='border-b border-slate-200'>
-                    <th className='px-4 py-3'>Account</th>
+                    <th className='px-4 py-3'>Party</th>
                     <th className='px-4 py-3'>Cheque range</th>
                     <th className='px-4 py-3'>Received date</th>
                     <th className='px-4 py-3'>Remarks</th>
@@ -391,7 +385,7 @@ export default function ChequeRanges() {
                       className='border-b border-slate-100 last:border-0 hover:bg-slate-50'
                     >
                       <td className='px-4 py-3 font-medium'>
-                        {range.account.accountCode} · {range.account.name}
+                        {range.party.name} · {range.party.partyType}
                       </td>
                       <td className='whitespace-nowrap px-4 py-3'>
                         {range.startChequeNo} – {range.endChequeNo}
@@ -440,7 +434,7 @@ export default function ChequeRanges() {
               <table className='min-w-full text-left text-sm'>
                 <thead className='bg-slate-50 text-slate-600'>
                   <tr className='border-b border-slate-200'>
-                    <th className='px-4 py-3'>Account</th>
+                    <th className='px-4 py-3'>Party</th>
                     <th className='px-4 py-3'>Cheque number</th>
                     <th className='px-4 py-3'>Cancelled date</th>
                     <th className='px-4 py-3'>Reason</th>
@@ -455,7 +449,7 @@ export default function ChequeRanges() {
                       className='border-b border-slate-100 last:border-0 hover:bg-slate-50'
                     >
                       <td className='px-4 py-3 font-medium'>
-                        {cheque.account.accountCode} · {cheque.account.name}
+                        {cheque.party.name} · {cheque.party.partyType}
                       </td>
                       <td className='whitespace-nowrap px-4 py-3'>{cheque.chequeNo}</td>
                       <td className='whitespace-nowrap px-4 py-3'>

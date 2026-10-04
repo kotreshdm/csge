@@ -6,7 +6,6 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useSelector } from 'react-redux';
 
-import { getAccounts } from '../../api/accounts';
 import { getLayouts } from '../../api/layouts';
 import { getMembers } from '../../api/members';
 import { getParties } from '../../api/parties';
@@ -21,7 +20,6 @@ import { Button } from '@/components/ui/button';
 import { ROUTES } from '../../const/routs';
 import type { RootState } from '../../store';
 
-import { AccountFields } from './AccountFields';
 import { AdvanceTransactionFields } from './AdvanceTransactionFields';
 import { AssetTransactionFields } from './AssetTransactionFields';
 import { BankTransactionFields } from './BankTransactionFields';
@@ -134,16 +132,9 @@ export default function TransactionFormPage({ mode }: TransactionFormPageProps) 
     staleTime: 60_000,
   });
 
-  const { data: accountsData } = useQuery({
-    queryKey: ['transaction-account-options'],
-    queryFn: getAccounts,
-    staleTime: 60_000,
-  });
-
   const members = membersData ?? [];
   const parties = partiesData?.data.items ?? [];
   const layouts = layoutsData?.data.items ?? [];
-  const accounts = accountsData?.data.items ?? [];
   const transaction = transactionData?.data;
   const filteredParties = useMemo(() => getFilteredParties(parties, form), [parties, form]);
   const selectedMember = useMemo(
@@ -225,7 +216,6 @@ export default function TransactionFormPage({ mode }: TransactionFormPageProps) 
 
       const defaults = {
         receiptNo: previous.receiptNo || lastShareInTransaction.receiptNo || '',
-        accountId: previous.accountId ?? lastShareInTransaction.accountId ?? null,
         paymentMode: previous.paymentMode ?? lastShareInTransaction.paymentMode ?? null,
         shareAmount:
           previous.shareAmount === '0' ? lastShareInTransaction.shareAmount : previous.shareAmount,
@@ -355,9 +345,9 @@ export default function TransactionFormPage({ mode }: TransactionFormPageProps) 
               {isEditing ? 'Edit transaction' : 'Add transaction'}
             </h1>
             <p className='mt-1 text-sm text-slate-500'>
-              Member identifies the account affected. Entry attribution is recorded from your
-              signed-in account. New entries start with the last cashbook number and page; adjust
-              them as needed.
+              The selected member identifies whose ledger is affected. The signed-in user is
+              recorded as the entry author. New entries start with the last cashbook number and
+              page; adjust them as needed.
             </p>
           </div>
           <Button variant='outline' render={<Link to={ROUTES.ADMIN.TRANSACTIONS} />}>
@@ -429,13 +419,8 @@ export default function TransactionFormPage({ mode }: TransactionFormPageProps) 
                 </section>
 
                 <section className='border-t border-slate-200 pt-4'>
-                  <FormSectionHeading title='Accounts & payment' color='amber' />
-                  <div className='space-y-4'>
-                    {form.type === 'BANK' && (
-                      <AccountFields form={form} accounts={accounts} onFieldChange={updateField} />
-                    )}
-                    <PaymentFields form={form} onFieldChange={updateField} />
-                  </div>
+                  <FormSectionHeading title='Payment details' color='amber' />
+                  <PaymentFields form={form} onFieldChange={updateField} />
                 </section>
 
                 <section className='border-t border-slate-200 pt-4'>

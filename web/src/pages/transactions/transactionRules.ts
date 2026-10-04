@@ -1,22 +1,13 @@
 import type { TransactionPayload } from '../../api/types';
 import {
-  ADVANCE_SUBTYPES_BY_DIRECTION,
-  PARTY_TYPE_MATCHERS,
   PAYMENT_MODES,
-  REQUIRED_MEMBER_TYPES,
-  SHARE_AMOUNT_FIELDS,
-  TRANSACTION_SUBTYPES,
+  TRANSACTION_AMOUNT_FIELDS,
+  TRANSACTION_SUBTYPE_SUGGESTIONS,
   TRANSACTION_TYPES,
-  PARTY_VISIBLE_TYPES,
-  MEMBER_VISIBLE_TYPES,
-  LAYOUT_VISIBLE_TYPES,
-  TRANSACTION_DIRECTIONS,
-  VALID_TYPES_BY_DIRECTION,
 } from './transactionConstants';
 
-export { SHARE_AMOUNT_FIELDS };
-
 const ZERO = '0';
+const amountKeys = TRANSACTION_AMOUNT_FIELDS.map(([field]) => field);
 
 export function inputValue(value: string | number | null | undefined) {
   return value === null || value === undefined ? '' : String(value);
@@ -31,368 +22,121 @@ export function getLocalDateInputValue(date: Date = new Date()) {
 
 export function blankTransaction(memberId = ''): TransactionPayload {
   return {
+    transactionDate: getLocalDateInputValue(),
     cashbookNo: '',
     cashbookPage: '',
-    transactionDate: getLocalDateInputValue(),
-    direction: 'IN',
-    type: 'SHARE',
+    type: 'CREDIT',
     subType: '',
     memberId: null,
     partyId: null,
     layoutId: null,
-    accountId: null,
-    shareAmount: '0',
-    shareFeeAmount: '0',
-    membershipFeeAmount: '0',
-    siteDepositAmount: '0',
-    welfareFundAmount: '0',
-    booksFormsAmount: '0',
-    miscellaneousAmount: '0',
-    otherAmount: '0',
-    totalAmount: '0',
+    shareAmount: ZERO,
+    shareFeeAmount: ZERO,
+    applicationFeeAmount: ZERO,
+    admissionFeeAmount: ZERO,
+    membershipFeeAmount: ZERO,
+    siteDepositAmount: ZERO,
+    welfareFundAmount: ZERO,
+    booksFormsAmount: ZERO,
+    miscellaneousAmount: ZERO,
+    otherAmount: ZERO,
+    totalAmount: ZERO,
     receiptNo: null,
     paymentMode: null,
     chequeNo: null,
     chequeDate: null,
     bankReferenceNo: null,
-    referenceTransactionId: null,
-    description: null,
     remarks: null,
-    createdBy: memberId,
-    updatedBy: null,
+    createdBy: memberId || undefined,
   };
 }
 
-export function getAllowedTypes(direction: string): readonly TransactionPayload['type'][] {
-  return (VALID_TYPES_BY_DIRECTION[direction as keyof typeof VALID_TYPES_BY_DIRECTION] ??
-    TRANSACTION_TYPES) as readonly TransactionPayload['type'][];
-}
-
-export function getSubtypeOptions(type: string, direction?: TransactionPayload['direction']) {
-  const options = TRANSACTION_SUBTYPES[type] ?? [];
-
-  if (type !== 'ADVANCE' || !direction) {
-    return options;
-  }
-
-  if (direction !== 'IN' && direction !== 'OUT') {
-    return options;
-  }
-
-  const allowed = ADVANCE_SUBTYPES_BY_DIRECTION[direction] ?? [];
-  return options.filter(option => allowed.some(allowedOption => allowedOption === option));
-}
-
-export function isSubtypeRequired(type: string) {
-  return ['EXPENSE', 'INCOME', 'ADVANCE', 'ASSET', 'OTHER'].includes(type);
-}
-
-export function isMemberRequired(type: string) {
-  return REQUIRED_MEMBER_TYPES.has(type);
-}
-
-export function isMemberVisible(type: string) {
-  return MEMBER_VISIBLE_TYPES.has(type);
-}
-
-export function isPartyVisible(type: string) {
-  return PARTY_VISIBLE_TYPES.has(type);
-}
-
-export function isLayoutVisible(type: string) {
-  return LAYOUT_VISIBLE_TYPES.has(type);
-}
-
-function normalizePartyType(partyType: string) {
-  return partyType
+function subtypeKey(value: string) {
+  return value
     .trim()
-    .toLocaleUpperCase()
-    .replace(/[\s_-]+/g, '');
+    .toUpperCase()
+    .replace(/[\\s-]+/g, '_');
 }
 
-function filterPartyTypes(
-  parties: Array<{ id: string; name: string; partyType: string }>,
-  allowedPartyTypes: readonly string[],
-) {
-  const allowed = new Set(allowedPartyTypes.map(normalizePartyType));
-  return parties.filter(party => allowed.has(normalizePartyType(party.partyType)));
+export function isMemberVisible(subType: string) {
+  const subtype = subtypeKey(subType);
+  return subtype.includes('SHARE') || subtype.includes('SITE') || subtype === 'LAYOUT_TRANSFER';
 }
 
-const EXPENSE_EXCLUDED_PARTY_TYPES = [
-  'EMPLOYEE',
-  'DEVELOPER',
-  'DIRECTOR',
-  'PRESIDENT',
-  'CHIEF PROMOTER',
-  'SECRETARY',
-];
+export function isPartyVisible(subType: string) {
+  const subtype = subtypeKey(subType);
+  return (
+    subtype.includes('ADVANCE') ||
+    subtype === 'SALARY' ||
+    subtype === 'RENT' ||
+    subtype.startsWith('BANK_')
+  );
+}
+
+export function isLayoutVisible(subType: string) {
+  const subtype = subtypeKey(subType);
+  return subtype.includes('SITE') || subtype.includes('LAYOUT') || subtype.includes('ADVANCE');
+}
+
+function normalizePartyType(value: string) {
+  return value
+    .trim()
+    .toUpperCase()
+    .replace(/[\\s_-]+/g, '');
+}
 
 export function getFilteredParties(
   parties: Array<{ id: string; name: string; partyType: string }>,
   form: TransactionPayload,
 ) {
-  if (!isPartyVisible(form.type)) {
-    return [];
-  }
+  const subtype = subtypeKey(form.subType);
+  if (!isPartyVisible(subtype)) return [];
+  const allowedType =
+    subtype === 'SALARY'
+      ? 'EMPLOYEE'
+      : subtype === 'RENT'
+        ? 'LANDLORD'
+        : subtype.startsWith('BANK_')
+          ? 'BANK'
+          : null;
+  return allowedType
+    ? parties.filter(party => normalizePartyType(party.partyType) === allowedType)
+    : parties;
+}
 
-  if (form.type === 'OTHER') {
-    return parties;
-  }
+function toMinorUnits(value: string | number | null | undefined) {
+  const text = inputValue(value).trim();
+  if (!text) return 0n;
+  const match = /^(\\d+)(?:\\.(\\d{0,2}))?$/.exec(text);
+  if (!match) return 0n;
+  return BigInt(match[1]) * 100n + BigInt((match[2] ?? '').padEnd(2, '0'));
+}
 
-  const preferred = (() => {
-    if (form.type === 'EXPENSE' && form.subType === 'RENT') return PARTY_TYPE_MATCHERS.EXPENSE_RENT;
-    if (form.type === 'EXPENSE' && form.subType === 'SALARY')
-      return PARTY_TYPE_MATCHERS.EXPENSE_SALARY;
-    if (form.type === 'EXPENSE' && form.subType === 'FURNITURE')
-      return PARTY_TYPE_MATCHERS.EXPENSE_FURNITURE;
-    if (form.type === 'ADVANCE' && form.subType === 'DIRECTOR_ADVANCE')
-      return PARTY_TYPE_MATCHERS.ADVANCE_DIRECTOR_ADVANCE;
-    if (form.type === 'ADVANCE' && form.subType === 'DIRECTOR_ADVANCE_RETURN')
-      return PARTY_TYPE_MATCHERS.ADVANCE_DIRECTOR_ADVANCE;
-    if (form.type === 'ADVANCE' && form.subType === 'DEVELOPER_ADVANCE')
-      return PARTY_TYPE_MATCHERS.ADVANCE_DEVELOPER_ADVANCE;
-    if (form.type === 'ADVANCE' && form.subType === 'DEVELOPER_ADVANCE_RETURN')
-      return PARTY_TYPE_MATCHERS.ADVANCE_DEVELOPER_ADVANCE;
-    if (form.type === 'ADVANCE' && form.subType === 'EMPLOYEE_SECURITY_DEPOSIT')
-      return PARTY_TYPE_MATCHERS.ADVANCE_EMPLOYEE_ADVANCE;
-    if (form.type === 'ADVANCE' && form.subType === 'EMPLOYEE_SECURITY_DEPOSIT_RETURN')
-      return PARTY_TYPE_MATCHERS.ADVANCE_EMPLOYEE_ADVANCE;
-    if (form.type === 'ADVANCE' && form.subType === 'PRESIDENT_ADVANCE')
-      return PARTY_TYPE_MATCHERS.ADVANCE_DIRECTOR_ADVANCE;
-    if (form.type === 'ADVANCE' && form.subType === 'PRESIDENT_ADVANCE_RETURN')
-      return PARTY_TYPE_MATCHERS.ADVANCE_DIRECTOR_ADVANCE;
-    if (form.type === 'ADVANCE' && form.subType === 'SECRETARY_ADVANCE')
-      return PARTY_TYPE_MATCHERS.ADVANCE_DIRECTOR_ADVANCE;
-    if (form.type === 'ADVANCE' && form.subType === 'SECRETARY_ADVANCE_RETURN')
-      return PARTY_TYPE_MATCHERS.ADVANCE_DIRECTOR_ADVANCE;
-    if (
-      form.type === 'ADVANCE' &&
-      (form.subType === 'OTHER_ADVANCE' || form.subType === 'OTHER_ADVANCE_RETURN')
-    )
-      return PARTY_TYPE_MATCHERS.ADVANCE_OTHER;
-    if (form.type === 'ASSET' && form.subType === 'BUILDING_ADVANCE')
-      return PARTY_TYPE_MATCHERS.ASSET_BUILDING_ADVANCE;
-    if (form.type === 'ASSET' && form.subType === 'FURNITURE')
-      return PARTY_TYPE_MATCHERS.ASSET_FURNITURE;
-    if (form.type === 'EXPENSE') return [];
-    return PARTY_TYPE_MATCHERS.OTHER;
-  })();
-
-  if (form.type === 'EXPENSE' && preferred.length === 0) {
-    const excluded = new Set(EXPENSE_EXCLUDED_PARTY_TYPES.map(normalizePartyType));
-    return parties.filter(party => !excluded.has(normalizePartyType(party.partyType)));
-  }
-
-  return filterPartyTypes(parties, preferred);
+function fromMinorUnits(value: bigint) {
+  return `${value / 100n}.${String(value % 100n).padStart(2, '0')}`;
 }
 
 export function calculateTotalAmount(form: TransactionPayload) {
-  const amountFields = getApplicableAmountFields(form) as Array<keyof TransactionPayload>;
-  return amountFields
-    .reduce((sum, field) => {
-      const value = Number(form[field] ?? '0');
-      return sum + (Number.isFinite(value) ? value : 0);
-    }, 0)
-    .toString();
-}
-
-export function getApplicableAmountFields(form: TransactionPayload) {
-  if (form.type === 'SHARE') {
-    return form.direction === 'IN'
-      ? (SHARE_AMOUNT_FIELDS.map(([name]) => name) as Array<keyof TransactionPayload>)
-      : (['shareAmount'] as Array<keyof TransactionPayload>);
-  }
-
-  if (form.type === 'LAYOUT') {
-    return ['siteDepositAmount'] as Array<keyof TransactionPayload>;
-  }
-
-  return ['otherAmount'] as Array<keyof TransactionPayload>;
-}
-
-function zeroUnrelatedAmountFields(next: TransactionPayload) {
-  const allAmountFields = [
-    'shareAmount',
-    'shareFeeAmount',
-    'membershipFeeAmount',
-    'siteDepositAmount',
-    'welfareFundAmount',
-    'booksFormsAmount',
-    'miscellaneousAmount',
-    'otherAmount',
-  ] as const;
-
-  const applicable = new Set(getApplicableAmountFields(next));
-
-  for (const field of allAmountFields) {
-    if (!applicable.has(field)) {
-      next[field] = ZERO;
-    }
-  }
-
-  next.totalAmount = calculateTotalAmount(next);
-}
-
-function normalizePaymentFields(next: TransactionPayload) {
-  if (next.paymentMode === 'CASH') {
-    next.chequeNo = null;
-    next.chequeDate = null;
-    next.bankReferenceNo = null;
-    return;
-  }
-
-  if (next.paymentMode === 'CHEQUE') {
-    next.bankReferenceNo = null;
-    return;
-  }
-
-  if (next.paymentMode === 'BANK_TRANSFER' || next.paymentMode === 'UPI') {
-    next.chequeNo = null;
-    next.chequeDate = null;
-    return;
-  }
-
-  if (next.paymentMode === 'OTHER') {
-    next.chequeNo = null;
-    next.chequeDate = null;
-  }
-}
-
-function normalizeAccountFields(next: TransactionPayload) {
-  if (next.type !== 'BANK') {
-    next.accountId = null;
-    return;
-  }
-
-  next.accountId = next.accountId ?? null;
-}
-
-function normalizeLayoutFields(next: TransactionPayload) {
-  if (next.type !== 'LAYOUT') {
-    next.layoutId = null;
-    return;
-  }
-
-  next.layoutId = next.layoutId ?? null;
-}
-
-function normalizeMemberAndPartyFields(next: TransactionPayload) {
-  if (!isMemberVisible(next.type)) {
-    next.memberId = null;
-  }
-
-  if (!isPartyVisible(next.type)) {
-    next.partyId = null;
-  }
-
-  if (!isLayoutVisible(next.type)) {
-    next.layoutId = null;
-  }
+  const total = amountKeys.reduce((sum, field) => sum + toMinorUnits(form[field]), 0n);
+  return fromMinorUnits(total);
 }
 
 export function normalizeTransaction(form: TransactionPayload): TransactionPayload {
-  const normalizedDate =
-    typeof form.transactionDate === 'string' && form.transactionDate.length >= 10
-      ? form.transactionDate.slice(0, 10)
-      : getLocalDateInputValue();
-
   const next: TransactionPayload = {
     ...blankTransaction(),
     ...form,
-    transactionDate: normalizedDate,
+    transactionDate:
+      typeof form.transactionDate === 'string' && form.transactionDate.length >= 10
+        ? form.transactionDate.slice(0, 10)
+        : getLocalDateInputValue(),
+    subType: typeof form.subType === 'string' ? form.subType : '',
   };
 
-  if (!TRANSACTION_TYPES.includes(next.type as (typeof TRANSACTION_TYPES)[number])) {
-    next.type = 'OTHER';
+  if (!TRANSACTION_TYPES.includes(next.type)) next.type = 'CREDIT';
+  for (const field of amountKeys) {
+    if (next[field] === '') next[field] = ZERO;
   }
-
-  if (!TRANSACTION_DIRECTIONS.includes(next.direction)) {
-    next.direction = 'IN';
-  }
-
-  const allowedTypes = getAllowedTypes(next.direction);
-  if (!allowedTypes.includes(next.type)) {
-    next.type = allowedTypes[0] ?? 'SHARE';
-  }
-
-  if (next.type === 'BANK') {
-    next.subType = '';
-  } else if (!isSubtypeRequired(next.type)) {
-    next.subType = '';
-  } else if (!getSubtypeOptions(next.type, next.direction).includes(next.subType)) {
-    next.subType = '';
-  }
-
-  if (next.type === 'SHARE') {
-    next.partyId = null;
-    next.layoutId = null;
-    next.siteDepositAmount = ZERO;
-    next.otherAmount = ZERO;
-    next.shareAmount = next.shareAmount || ZERO;
-    if (next.direction !== 'IN') {
-      next.shareFeeAmount = ZERO;
-      next.membershipFeeAmount = ZERO;
-      next.welfareFundAmount = ZERO;
-      next.booksFormsAmount = ZERO;
-      next.miscellaneousAmount = ZERO;
-    }
-  }
-
-  if (next.type === 'LAYOUT') {
-    next.partyId = null;
-    next.shareAmount = ZERO;
-    next.shareFeeAmount = ZERO;
-    next.membershipFeeAmount = ZERO;
-    next.welfareFundAmount = ZERO;
-    next.booksFormsAmount = ZERO;
-    next.miscellaneousAmount = ZERO;
-    next.otherAmount = ZERO;
-  }
-
-  if (next.type === 'BANK') {
-    next.memberId = null;
-    next.partyId = null;
-    next.layoutId = null;
-    next.subType = '';
-    next.shareAmount = ZERO;
-    next.shareFeeAmount = ZERO;
-    next.membershipFeeAmount = ZERO;
-    next.siteDepositAmount = ZERO;
-    next.welfareFundAmount = ZERO;
-    next.booksFormsAmount = ZERO;
-    next.miscellaneousAmount = ZERO;
-    next.otherAmount = next.otherAmount || ZERO;
-  }
-
-  if (['EXPENSE', 'INCOME', 'ADVANCE', 'ASSET', 'OTHER'].includes(next.type)) {
-    next.shareAmount = ZERO;
-    next.shareFeeAmount = ZERO;
-    next.membershipFeeAmount = ZERO;
-    next.welfareFundAmount = ZERO;
-    next.booksFormsAmount = ZERO;
-    next.miscellaneousAmount = ZERO;
-    next.siteDepositAmount = ZERO;
-    next.otherAmount = next.otherAmount || ZERO;
-  }
-
-  if (!isMemberVisible(next.type)) {
-    next.memberId = null;
-  }
-
-  if (!isPartyVisible(next.type)) {
-    next.partyId = null;
-  }
-
-  if (!isLayoutVisible(next.type)) {
-    next.layoutId = null;
-  }
-
-  normalizeMemberAndPartyFields(next);
-  normalizeLayoutFields(next);
-  normalizeAccountFields(next);
-  normalizePaymentFields(next);
-  zeroUnrelatedAmountFields(next);
-
+  next.totalAmount = calculateTotalAmount(next);
   return next;
 }
 
@@ -400,61 +144,58 @@ export function buildTransactionPayload(
   form: TransactionPayload,
   actorMemberId: string,
   isEditing: boolean,
-) {
+): TransactionPayload {
   const next = normalizeTransaction(form);
-
-  const payload: TransactionPayload = {
-    ...next,
+  return {
+    transactionDate: next.transactionDate,
     cashbookNo: next.cashbookNo === '' || next.cashbookNo === null ? null : Number(next.cashbookNo),
     cashbookPage:
       next.cashbookPage === '' || next.cashbookPage === null ? null : Number(next.cashbookPage),
-    memberId: isMemberVisible(next.type) ? next.memberId || null : null,
-    partyId: isPartyVisible(next.type) ? next.partyId || null : null,
-    layoutId: isLayoutVisible(next.type) ? next.layoutId || null : null,
-    accountId: next.type === 'BANK' ? next.accountId || null : null,
-    shareAmount: next.type === 'SHARE' ? next.shareAmount : '0',
-    shareFeeAmount: next.type === 'SHARE' && next.direction === 'IN' ? next.shareFeeAmount : '0',
-    membershipFeeAmount:
-      next.type === 'SHARE' && next.direction === 'IN' ? next.membershipFeeAmount : '0',
-    siteDepositAmount: next.type === 'LAYOUT' ? next.siteDepositAmount : '0',
-    welfareFundAmount:
-      next.type === 'SHARE' && next.direction === 'IN' ? next.welfareFundAmount : '0',
-    booksFormsAmount:
-      next.type === 'SHARE' && next.direction === 'IN' ? next.booksFormsAmount : '0',
-    miscellaneousAmount:
-      next.type === 'SHARE' && next.direction === 'IN' ? next.miscellaneousAmount : '0',
-    otherAmount: ['BANK', 'EXPENSE', 'INCOME', 'ADVANCE', 'ASSET', 'OTHER'].includes(next.type)
-      ? next.otherAmount
-      : '0',
+    type: next.type,
+    subType: next.subType.trim(),
+    memberId: next.memberId || null,
+    partyId: next.partyId || null,
+    layoutId: next.layoutId || null,
+    shareAmount: next.shareAmount || ZERO,
+    shareFeeAmount: next.shareFeeAmount || ZERO,
+    applicationFeeAmount: next.applicationFeeAmount || ZERO,
+    admissionFeeAmount: next.admissionFeeAmount || ZERO,
+    membershipFeeAmount: next.membershipFeeAmount || ZERO,
+    siteDepositAmount: next.siteDepositAmount || ZERO,
+    welfareFundAmount: next.welfareFundAmount || ZERO,
+    booksFormsAmount: next.booksFormsAmount || ZERO,
+    miscellaneousAmount: next.miscellaneousAmount || ZERO,
+    otherAmount: next.otherAmount || ZERO,
     totalAmount: calculateTotalAmount(next),
     receiptNo: next.receiptNo || null,
     paymentMode: next.paymentMode || null,
     chequeNo: next.chequeNo || null,
     chequeDate: next.chequeDate || null,
     bankReferenceNo: next.bankReferenceNo || null,
-    referenceTransactionId: next.referenceTransactionId || null,
-    description: next.description || null,
     remarks: next.remarks || null,
     ...(isEditing ? { updatedBy: actorMemberId } : { createdBy: actorMemberId }),
   };
+}
 
-  return payload;
+export function getPaymentModeOptions() {
+  return [...PAYMENT_MODES];
 }
 
 export function resolveCashbookImage(
   cashbookNo: string | number | null,
   cashbookPage: string | number | null,
 ) {
-  const no = inputValue(cashbookNo);
+  const number = inputValue(cashbookNo);
   const page = inputValue(cashbookPage);
 
-  if (!/^\d+$/.test(no) || !/^\d+$/.test(page)) {
-    return null;
-  }
-
-  return `/cashbook/${no}/${page}`;
+  if (!/^\d+$/.test(number) || !/^\d+$/.test(page)) return null;
+  return `/cashbook/${number}/${page}`;
 }
 
-export function getPaymentModeOptions() {
-  return [...PAYMENT_MODES];
+export function getTransactionTypes() {
+  return [...TRANSACTION_TYPES];
+}
+
+export function getTransactionSubtypeSuggestions() {
+  return [...TRANSACTION_SUBTYPE_SUGGESTIONS];
 }

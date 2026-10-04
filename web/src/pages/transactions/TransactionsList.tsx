@@ -23,7 +23,7 @@ export default function TransactionsList() {
       String(transaction.cashbookPage ?? ''),
       transaction.subType,
       transaction.type,
-      transaction.description ?? '',
+      transaction.transactionNo,
     ].some(value => value.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase())),
   );
 
@@ -79,7 +79,6 @@ export default function TransactionsList() {
                   <tr className='border-b border-slate-200'>
                     <th className='px-4 py-3'>Date</th>
                     <th className='px-4 py-3'>Cashbook</th>
-                    <th className='px-4 py-3'>Direction</th>
                     <th className='px-4 py-3'>Type</th>
                     <th className='px-4 py-3 text-right'>Amount</th>
                     <th className='px-4 py-3 text-right'>Actions</th>
@@ -101,7 +100,6 @@ export default function TransactionsList() {
                         </span>
                         <span className='ml-2 text-slate-500'>{transaction.subType}</span>
                       </td>
-                      <td className='px-4 py-3'>{transaction.direction}</td>
                       <td className='px-4 py-3'>{transaction.type}</td>
                       <td className='whitespace-nowrap px-4 py-3 text-right'>
                         {Number(transaction.totalAmount).toLocaleString('en-IN', {

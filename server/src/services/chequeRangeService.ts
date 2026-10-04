@@ -9,8 +9,8 @@ import {
 } from "../utils/validation.js";
 
 type ChequeRangeInput = Record<string, unknown>;
-type ChequeRangeWithAccount = Prisma.ChequeRangeGetPayload<{
-  include: { account: { select: { id: true; accountCode: true; name: true } } };
+type ChequeRangeWithParty = Prisma.ChequeRangeGetPayload<{
+  include: { party: { select: { id: true; name: true; partyType: true } } };
 }>;
 
 function parseChequeRangeId(id: string): bigint {
@@ -37,13 +37,13 @@ function chequeRangeData(input: ChequeRangeInput) {
     );
   }
 
-  const accountIdText = requiredString(input.accountId, "Account");
-  if (!/^\d+$/.test(accountIdText) || BigInt(accountIdText) <= 0n) {
-    throw new AppError(400, "Account must be a valid ID.");
+  const partyIdText = requiredString(input.partyId, "Party");
+  if (!/^\d+$/.test(partyIdText) || BigInt(partyIdText) <= 0n) {
+    throw new AppError(400, "Party must be a valid ID.");
   }
 
   return {
-    accountId: BigInt(accountIdText),
+    partyId: BigInt(partyIdText),
     startChequeNo,
     endChequeNo,
     receivedDate: requiredDate(input.receivedDate, "Received date"),
@@ -51,19 +51,19 @@ function chequeRangeData(input: ChequeRangeInput) {
   };
 }
 
-function serializeChequeRange(range: ChequeRangeWithAccount) {
+function serializeChequeRange(range: ChequeRangeWithParty) {
   return {
     ...range,
     id: range.id.toString(),
-    accountId: range.accountId.toString(),
-    account: { ...range.account, id: range.account.id.toString() },
+    partyId: range.partyId.toString(),
+    party: { ...range.party, id: range.party.id.toString() },
   };
 }
 
 function handleChequeRangeError(error: unknown): never {
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
     if (error.code === "P2003") {
-      throw new AppError(400, "The selected account does not exist.");
+      throw new AppError(400, "The selected party does not exist.");
     }
     if (error.code === "P2025") {
       throw new AppError(404, "Cheque range not found.");
@@ -72,13 +72,13 @@ function handleChequeRangeError(error: unknown): never {
   throw error;
 }
 
-const includeAccount = {
-  account: { select: { id: true, accountCode: true, name: true } },
+const includeParty = {
+  party: { select: { id: true, name: true, partyType: true } },
 } satisfies Prisma.ChequeRangeInclude;
 
 export async function getChequeRanges() {
   const ranges = await prisma.chequeRange.findMany({
-    include: includeAccount,
+    include: includeParty,
     orderBy: [{ receivedDate: "desc" }, { id: "desc" }],
   });
   return ranges.map(serializeChequeRange);
@@ -87,7 +87,7 @@ export async function getChequeRanges() {
 export async function getChequeRange(id: string) {
   const range = await prisma.chequeRange.findUnique({
     where: { id: parseChequeRangeId(id) },
-    include: includeAccount,
+    include: includeParty,
   });
   if (!range) throw new AppError(404, "Cheque range not found.");
   return serializeChequeRange(range);
@@ -97,7 +97,7 @@ export async function createChequeRange(input: ChequeRangeInput) {
   const data = chequeRangeData(input);
   try {
     return serializeChequeRange(
-      await prisma.chequeRange.create({ data, include: includeAccount }),
+      await prisma.chequeRange.create({ data, include: includeParty }),
     );
   } catch (error) {
     handleChequeRangeError(error);
@@ -111,7 +111,7 @@ export async function updateChequeRange(id: string, input: ChequeRangeInput) {
       await prisma.chequeRange.update({
         where: { id: parseChequeRangeId(id) },
         data,
-        include: includeAccount,
+        include: includeParty,
       }),
     );
   } catch (error) {

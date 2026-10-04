@@ -244,6 +244,8 @@ model Transaction {
   id              BigInt   @id @default(autoincrement())
   transactionNo   String   @unique
   transactionDate DateTime @db.Date
+  cashbookNo      Int?
+  cashbookPage    Int?
 
   type            TransactionType
   subType         String

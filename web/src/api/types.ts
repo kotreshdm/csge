@@ -88,77 +88,6 @@ export interface LayoutPricePayload {
   validTo: string;
 }
 
-export interface Account {
-  id: string;
-  accountCode: string;
-  name: string;
-  accountType: string;
-  accountNumber: string | null;
-  bankName: string | null;
-  openingBalance: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface AccountPayload {
-  accountCode: string;
-  name: string;
-  accountType: string;
-  accountNumber: string;
-  bankName: string;
-  openingBalance: string;
-  isActive: boolean;
-}
-
-export interface AccountStatementAccount {
-  id: string;
-  accountCode: string;
-  name: string;
-  accountType: string;
-  openingBalance: string;
-  totalCredit: string;
-  totalDebit: string;
-  closingBalance: string;
-}
-
-export interface AccountStatementTransaction extends Transaction {
-  member: { memberCode: string; name: string } | null;
-  party: { name: string; partyType: string } | null;
-  layout: { layoutCode: string; name: string } | null;
-  fromLayout: { layoutCode: string; name: string } | null;
-  toLayout: { layoutCode: string; name: string } | null;
-  fromAccount: { accountCode: string; name: string } | null;
-  toAccount: { accountCode: string; name: string } | null;
-  debit: string;
-  credit: string;
-  runningBalance: string;
-}
-
-export interface AccountStatementReport {
-  period: { fromDate: string; toDate: string };
-  accounts: AccountStatementAccount[];
-  bankTotals: {
-    openingBalance: string;
-    totalCredit: string;
-    totalDebit: string;
-    closingBalance: string;
-  };
-  statement: {
-    account: Pick<AccountStatementAccount, 'id' | 'accountCode' | 'name' | 'accountType'>;
-    period: { fromDate: string; toDate: string };
-    openingBalance: string;
-    totalCredit: string;
-    totalDebit: string;
-    closingBalance: string;
-    page: number;
-    pageSize: number;
-    total: number;
-    totalPages: number;
-    transactions: AccountStatementTransaction[];
-  } | null;
-}
-
 export interface Director {
   id: string;
   memberId: string;
@@ -251,18 +180,18 @@ export interface MemberAddressHistory {
 
 export interface ChequeRange {
   id: string;
-  accountId: string;
+  partyId: string;
   startChequeNo: string;
   endChequeNo: string;
   receivedDate: string;
   remarks: string | null;
   createdAt: string;
   updatedAt: string;
-  account: Pick<Account, 'id' | 'accountCode' | 'name'>;
+  party: Pick<Party, 'id' | 'name' | 'partyType'>;
 }
 
 export interface ChequeRangePayload {
-  accountId: string;
+  partyId: string;
   startChequeNo: string;
   endChequeNo: string;
   receivedDate: string;
@@ -271,18 +200,18 @@ export interface ChequeRangePayload {
 
 export interface CancelledCheque {
   id: string;
-  accountId: string;
+  partyId: string;
   chequeNo: string;
   cancelledDate: string;
   reason: string | null;
   remarks: string | null;
   createdAt: string;
   updatedAt: string;
-  account: Pick<Account, 'id' | 'accountCode' | 'name'>;
+  party: Pick<Party, 'id' | 'name' | 'partyType'>;
 }
 
 export interface CancelledChequePayload {
-  accountId: string;
+  partyId: string;
   chequeNo: string;
   cancelledDate: string;
   reason: string;
@@ -308,18 +237,19 @@ export interface CancelledReceiptPayload {
 
 export interface Transaction {
   id: string;
+  transactionNo: string;
+  transactionDate: string;
   cashbookNo: number | null;
   cashbookPage: number | null;
-  transactionDate: string;
-  direction: 'IN' | 'OUT';
-  type: 'SHARE' | 'LAYOUT' | 'BANK' | 'EXPENSE' | 'INCOME' | 'ADVANCE' | 'ASSET' | 'OTHER';
+  type: 'CREDIT' | 'DEBIT';
   subType: string;
   memberId: string | null;
   partyId: string | null;
   layoutId: string | null;
-  accountId: string | null;
   shareAmount: string;
   shareFeeAmount: string;
+  applicationFeeAmount: string;
+  admissionFeeAmount: string;
   membershipFeeAmount: string;
   siteDepositAmount: string;
   welfareFundAmount: string;
@@ -332,22 +262,45 @@ export interface Transaction {
   chequeNo: string | null;
   chequeDate: string | null;
   bankReferenceNo: string | null;
-  referenceTransactionId: string | null;
-  description: string | null;
   remarks: string | null;
-  createdBy: string;
+  createdBy: string | null;
   updatedBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+  member?: { memberId: string; memberCode: string; name: string } | null;
+  party?: { id: string; name: string; partyType: string } | null;
+  layout?: { id: string; layoutCode: string; name: string } | null;
 }
 
-export type TransactionPayload = Omit<
-  Transaction,
-  'id' | 'createdBy' | 'updatedBy' | 'cashbookNo' | 'cashbookPage'
-> & {
+export interface TransactionPayload {
+  transactionDate: string;
   cashbookNo: number | string | null;
   cashbookPage: number | string | null;
+  type: Transaction['type'];
+  subType: string;
+  memberId: string | null;
+  partyId: string | null;
+  layoutId: string | null;
+  shareAmount: string;
+  shareFeeAmount: string;
+  applicationFeeAmount: string;
+  admissionFeeAmount: string;
+  membershipFeeAmount: string;
+  siteDepositAmount: string;
+  welfareFundAmount: string;
+  booksFormsAmount: string;
+  miscellaneousAmount: string;
+  otherAmount: string;
+  totalAmount: string;
+  receiptNo: string | null;
+  paymentMode: Transaction['paymentMode'];
+  chequeNo: string | null;
+  chequeDate: string | null;
+  bankReferenceNo: string | null;
+  remarks: string | null;
   createdBy?: string;
   updatedBy?: string | null;
-};
+}
 
 export interface DashboardSummaryMonthlyEntry {
   key: string;
@@ -361,14 +314,12 @@ export interface DashboardRecentTransaction {
   id: string;
   transactionDate: string;
   totalAmount: string;
-  direction: 'IN' | 'OUT';
-  type: 'SHARE' | 'LAYOUT' | 'BANK' | 'EXPENSE' | 'INCOME' | 'ADVANCE' | 'ASSET' | 'OTHER';
+  type: 'CREDIT' | 'DEBIT';
   subType: string;
   paymentMode: 'CASH' | 'CHEQUE' | 'BANK_TRANSFER' | 'UPI' | 'OTHER' | null;
   member?: { memberCode: string; name: string } | null;
   party?: { name: string } | null;
   layout?: { layoutCode: string; name: string } | null;
-  account?: { accountCode: string; name: string } | null;
 }
 
 export interface DashboardAmountItem {
@@ -385,16 +336,6 @@ export interface DashboardLayoutDeposit {
   withdrawn: string;
   transferIn: string;
   transferOut: string;
-}
-
-export interface DashboardBankAccount {
-  id: string;
-  label: string;
-  balance: string;
-}
-
-export interface DashboardAccountBalance extends DashboardBankAccount {
-  accountType: string;
 }
 
 export interface DashboardAdvanceSubtype {
@@ -423,7 +364,6 @@ export interface DashboardTransaction extends Transaction {
   member: { memberCode: string; name: string } | null;
   party: { name: string; partyType: string } | null;
   layout: { layoutCode: string; name: string } | null;
-  account: { accountCode: string; name: string; accountType: string } | null;
 }
 
 export interface DashboardTransactionsPage {
@@ -464,9 +404,6 @@ export interface DashboardSummary {
     memberShareCount: number;
     associateShareCount: number;
     totalSiteDeposit: string;
-    cashBalance: string;
-    bankBalance: string;
-    totalAvailableFunds: string;
     welfareFund: string;
     welfareFundReceived: string;
     welfareFundUsed: string;
@@ -480,8 +417,6 @@ export interface DashboardSummary {
   incomeBreakdown: DashboardAmountItem[];
   expenseBreakdown: DashboardAmountItem[];
   layoutDeposits: DashboardLayoutDeposit[];
-  bankAccounts: DashboardBankAccount[];
-  accountBalances: DashboardAccountBalance[];
   advanceSubtypeBreakdown: DashboardAdvanceSubtype[];
   advancePartyBreakdown: DashboardAdvanceParty[];
   transactionTypeSummary: DashboardTransactionTypeSummary[];
@@ -492,22 +427,22 @@ export interface DashboardSummary {
 
 export interface MemberTransactionDetailsItem {
   id: string;
+  transactionNo: string;
   transactionDate: string;
-  direction: 'IN' | 'OUT';
-  type: 'SHARE' | 'LAYOUT' | 'BANK' | 'EXPENSE' | 'INCOME' | 'ADVANCE' | 'ASSET' | 'OTHER';
+  type: 'CREDIT' | 'DEBIT';
   subType: string;
   paymentMode: 'CASH' | 'CHEQUE' | 'BANK_TRANSFER' | 'UPI' | 'OTHER' | null;
   receiptNo: string | null;
   chequeNo: string | null;
   remarks: string | null;
-  description: string | null;
   memberId: string | null;
   partyId: string | null;
   layoutId: string | null;
-  accountId: string | null;
   totalAmount: string;
   shareAmount: string;
   shareFeeAmount: string;
+  applicationFeeAmount: string;
+  admissionFeeAmount: string;
   membershipFeeAmount: string;
   siteDepositAmount: string;
   welfareFundAmount: string;
@@ -516,7 +451,6 @@ export interface MemberTransactionDetailsItem {
   otherAmount: string;
   party?: { name: string; partyType: string } | null;
   layout?: { name: string; layoutCode: string } | null;
-  account?: { name: string; accountCode: string } | null;
 }
 
 export interface MemberTransactionReport {

@@ -1,9 +1,9 @@
 import { useState, type FormEvent } from 'react';
-import type { Account, CancelledChequePayload } from '../../api/types';
+import type { Party, CancelledChequePayload } from '../../api/types';
 import { Button } from '@/components/ui/button';
 
 interface CancelledChequeFormProps {
-  accounts: Account[];
+  parties: Party[];
   defaultValues?: CancelledChequePayload;
   isSubmitting: boolean;
   submitLabel: string;
@@ -13,7 +13,7 @@ interface CancelledChequeFormProps {
 }
 
 const emptyForm: CancelledChequePayload = {
-  accountId: '',
+  partyId: '',
   chequeNo: '',
   cancelledDate: new Date().toISOString().slice(0, 10),
   reason: '',
@@ -21,7 +21,7 @@ const emptyForm: CancelledChequePayload = {
 };
 
 export default function CancelledChequeForm({
-  accounts,
+  parties,
   defaultValues = emptyForm,
   isSubmitting,
   submitLabel,
@@ -53,17 +53,17 @@ export default function CancelledChequeForm({
     <form onSubmit={handleSubmit} className='rounded-lg border border-slate-200 bg-white p-5 shadow-sm'>
       <div className='grid gap-4 sm:grid-cols-2'>
         <label className='grid gap-1.5 text-sm font-medium text-slate-700'>
-          <span>Bank / cash account *</span>
+          <span>Party *</span>
           <select
             required
-            value={form.accountId}
-            onChange={event => updateField('accountId', event.target.value)}
+            value={form.partyId}
+            onChange={event => updateField('partyId', event.target.value)}
             className='h-10 rounded-md border border-slate-300 bg-white px-3 font-normal text-slate-900 outline-none focus:border-teal-700 focus:ring-2 focus:ring-teal-700/15'
           >
-            <option value=''>Select account</option>
-            {accounts.map(account => (
-              <option key={account.id} value={account.id}>
-                {account.accountCode} · {account.name}
+            <option value=''>Select party</option>
+            {parties.map(party => (
+              <option key={party.id} value={party.id}>
+                {party.name} · {party.partyType}
               </option>
             ))}
           </select>
@@ -115,7 +115,7 @@ export default function CancelledChequeForm({
         <Button type='button' variant='outline' disabled={isSubmitting} onClick={onCancel}>
           Cancel
         </Button>
-        <Button type='submit' disabled={isSubmitting || accounts.length === 0}>
+        <Button type='submit' disabled={isSubmitting || parties.length === 0}>
           {isSubmitting ? 'Saving...' : submitLabel}
         </Button>
       </div>

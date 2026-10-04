@@ -21,9 +21,7 @@ import EditParty from './pages/parties/EditParty';
 import Layouts from './pages/layouts/Layouts';
 import AddLayout from './pages/layouts/AddLayout';
 import EditLayout from './pages/layouts/EditLayout';
-import Accounts from './pages/accounts/Accounts';
-import AddAccount from './pages/accounts/AddAccount';
-import EditAccount from './pages/accounts/EditAccount';
+
 import ChequeRanges from './pages/chequeRanges/ChequeRanges';
 import Transactions from './pages/transactions/TransactionsList';
 import AddTransaction from './pages/transactions/AddTransaction';

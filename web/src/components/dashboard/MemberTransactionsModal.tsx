@@ -247,7 +247,7 @@ export function MemberTransactionsModal({
                     </td>
                     <td className='px-3 py-3'>
                       {item.type === 'LAYOUT'
-                        ? item.layout?.name || item.fromLayout?.name || item.toLayout?.name || '—'
+                        ? item.layout?.name || '—'
                         : '—'}
                     </td>
                     <td className='px-3 py-3 whitespace-nowrap font-medium text-slate-800'>

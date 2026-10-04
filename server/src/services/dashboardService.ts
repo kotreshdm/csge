@@ -25,7 +25,6 @@ type Balance = { share: Prisma.Decimal; siteDeposit: Prisma.Decimal };
 type BalanceGroup = {
   memberId: bigint | null;
   type: string;
-  direction: string;
   layoutId: bigint | null;
   _sum: {
     shareAmount: Prisma.Decimal | null;
@@ -151,13 +150,12 @@ function calculateBalances(groups: BalanceGroup[]) {
     if (group.memberId === null) continue;
     const key = group.memberId.toString();
     const balance = balances.get(key) ?? emptyBalance();
-    const sign =
-      group.direction === "IN" ? 1 : group.direction === "OUT" ? -1 : 0;
-    if (group.type === "SHARE") {
+    const sign = group.type === "CREDIT" ? 1 : -1;
+    if (group.layoutId === null) {
       const share = decimal(group._sum.shareAmount);
       balance.share =
         sign > 0 ? balance.share.plus(share) : balance.share.minus(share);
-    } else if (group.type === "LAYOUT") {
+    } else {
       const deposit = decimal(group._sum.siteDepositAmount);
       balance.siteDeposit =
         sign > 0
@@ -185,12 +183,11 @@ function formatLocalDateInput(date: Date): string {
 
 async function balancesAsOf(endExclusive: Date, memberIds?: bigint[]) {
   const groups = await prisma.transaction.groupBy({
-    by: ["memberId", "type", "direction", "layoutId"],
+    by: ["memberId", "type", "layoutId"],
     where: {
       memberId: memberIds ? { in: memberIds } : { not: null },
       transactionDate: { lt: endExclusive },
-      type: { in: ["SHARE", "LAYOUT"] },
-      direction: { in: ["IN", "OUT"] },
+      type: { in: ["CREDIT", "DEBIT"] },
     },
     _sum: { shareAmount: true, siteDepositAmount: true },
   });
