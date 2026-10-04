@@ -1,5 +1,5 @@
 import type { TransactionPayload } from '../../api/types';
-import { TRANSACTION_AMOUNT_FIELDS } from './transactionConstants';
+import { SHARE_TRANSACTION_AMOUNT_FIELDS } from './transactionConstants';
 import { inputValue } from './transactionRules';
 
 interface ShareTransactionFieldsProps {
@@ -13,7 +13,7 @@ interface ShareTransactionFieldsProps {
 export function ShareTransactionFields({ form, onFieldChange }: ShareTransactionFieldsProps) {
   return (
     <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-3'>
-      {TRANSACTION_AMOUNT_FIELDS.map(([name, label]) => (
+      {SHARE_TRANSACTION_AMOUNT_FIELDS.map(([name, label]) => (
         <label key={name} className='grid gap-1.5 text-sm font-medium text-slate-700'>
           <span>{label}</span>
           <input

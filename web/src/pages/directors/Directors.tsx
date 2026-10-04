@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Pencil, Plus, Trash2, X } from 'lucide-react';
 import { toast } from 'sonner';
@@ -11,22 +11,39 @@ import { Button } from '@/components/ui/button';
 type MemberOption = PaginatedMembersResponse['items'][number];
 
 const DIRECTOR_POSITIONS = [
-  'Director',
   'President',
+  'Vice-President',
   'Executive Director',
-  'Chief Promoter',
+  'Director',
   'Nominated Director',
   'Other',
 ];
 const DIRECTOR_QUOTAS = ['General', 'Women', 'SC', 'ST', 'OBC', 'Other'];
 
-const newDirectorValues = (): DirectorPayload => ({
+const getDateValue = (value: string | null | undefined) => value?.slice(0, 10) ?? '';
+const getTodayDateValue = () => new Date().toISOString().slice(0, 10);
+
+const getLatestDirector = (directors: Director[]) => {
+  if (directors.length === 0) {
+    return null;
+  }
+
+  return [...directors].sort((left, right) => {
+    const createdAtDiff = new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime();
+    if (createdAtDiff !== 0) {
+      return createdAtDiff;
+    }
+    return right.fromDate.localeCompare(left.fromDate);
+  })[0];
+};
+
+const newDirectorValues = (previousDirector?: Director | null): DirectorPayload => ({
   memberId: '',
   position: 'Director',
   quota: 'General',
-  term: 1,
-  fromDate: new Date().toISOString().slice(0, 10),
-  toDate: '',
+  term: previousDirector ? previousDirector.term : 1,
+  fromDate: previousDirector ? getDateValue(previousDirector.fromDate) : getTodayDateValue(),
+  toDate: previousDirector ? getDateValue(previousDirector.toDate) : '',
   remarks: '',
 });
 
@@ -45,6 +62,7 @@ async function getAllMembers() {
 function DirectorModal({
   director,
   members,
+  allDirectors,
   saving,
   error,
   onClose,
@@ -52,6 +70,7 @@ function DirectorModal({
 }: {
   director: Director | null;
   members: MemberOption[];
+  allDirectors: Director[];
   saving: boolean;
   error: string;
   onClose: () => void;
@@ -68,8 +87,14 @@ function DirectorModal({
           toDate: director.toDate?.slice(0, 10) ?? '',
           remarks: director.remarks ?? '',
         }
-      : newDirectorValues(),
+      : newDirectorValues(getLatestDirector(allDirectors)),
   );
+  const selectMember = (memberId: string) => {
+    if (director) return;
+
+    setForm(previous => ({ ...previous, memberId }));
+  };
+
   const [validationError, setValidationError] = useState('');
   const [memberLookup, setMemberLookup] = useState('');
   const [isMemberOptionsOpen, setIsMemberOptionsOpen] = useState(false);
@@ -138,7 +163,7 @@ function DirectorModal({
                 if (event.key === 'Escape') setIsMemberOptionsOpen(false);
                 if (event.key === 'Enter' && isMemberOptionsOpen && matchingMembers[0]) {
                   event.preventDefault();
-                  setForm(previous => ({ ...previous, memberId: matchingMembers[0].memberId }));
+                  const selected = matchingMembers[0];
                   setMemberLookup('');
                   setIsMemberOptionsOpen(false);
                 }
@@ -159,7 +184,7 @@ function DirectorModal({
                     role='option'
                     aria-selected={member.memberId === form.memberId}
                     onClick={() => {
-                      setForm(previous => ({ ...previous, memberId: member.memberId }));
+                      selectMember(member.memberId);
                       setMemberLookup('');
                       setIsMemberOptionsOpen(false);
                       setValidationError('');
@@ -309,6 +334,42 @@ export default function Directors() {
   const membersQuery = useQuery({ queryKey: ['director-member-options'], queryFn: getAllMembers });
   const directors = directorsQuery.data?.data.items ?? [];
   const members = membersQuery.data ?? [];
+  const groupedDirectors = useMemo(() => {
+    const groups = new Map<number, Director[]>();
+
+    directors.forEach(director => {
+      const group = groups.get(director.term) ?? [];
+      group.push(director);
+      groups.set(director.term, group);
+    });
+
+    return [...groups.entries()]
+      .map(([term, records]) => ({
+        term,
+        records: [...records].sort((left, right) => {
+          const leftPositionOrder = DIRECTOR_POSITIONS.indexOf(left.position);
+          const rightPositionOrder = DIRECTOR_POSITIONS.indexOf(right.position);
+          const leftOrder =
+            leftPositionOrder === -1 ? DIRECTOR_POSITIONS.length : leftPositionOrder;
+          const rightOrder =
+            rightPositionOrder === -1 ? DIRECTOR_POSITIONS.length : rightPositionOrder;
+
+          return leftOrder - rightOrder || right.fromDate.localeCompare(left.fromDate);
+        }),
+      }))
+      .sort((left, right) => right.term - left.term);
+  }, [directors]);
+  const [openTerm, setOpenTerm] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!groupedDirectors.length) {
+      setOpenTerm(null);
+      return;
+    }
+    console.log(groupedDirectors);
+
+    setOpenTerm(previous => previous ?? groupedDirectors[0].term);
+  }, [groupedDirectors]);
 
   const closeModal = () => {
     setIsModalOpen(false);
@@ -382,71 +443,100 @@ export default function Directors() {
           ) : directors.length === 0 ? (
             <p className='p-6 text-sm text-slate-500'>No director records found.</p>
           ) : (
-            <div className='overflow-x-auto'>
-              <table className='min-w-full text-left text-sm'>
-                <thead className='bg-slate-50 text-slate-600'>
-                  <tr className='border-b border-slate-200'>
-                    <th className='px-4 py-3'>Member code</th>
-                    <th className='px-4 py-3'>Director</th>
-                    <th className='px-4 py-3'>Position</th>
-                    <th className='px-4 py-3'>Quota</th>
-                    <th className='px-4 py-3'>Term</th>
-                    <th className='px-4 py-3'>Start date</th>
-                    <th className='px-4 py-3'>End date</th>
-                    <th className='px-4 py-3'>Remarks</th>
-                    <th className='px-4 py-3 text-right'>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {directors.map(director => (
-                    <tr
-                      key={director.id}
-                      className='border-b border-slate-100 last:border-0 hover:bg-slate-50'
+            <div className='space-y-3 p-4'>
+              {groupedDirectors.map(group => {
+                const isOpen = openTerm === group.term;
+                return (
+                  <div
+                    key={group.term}
+                    className='overflow-hidden rounded-lg border border-slate-200'
+                  >
+                    <button
+                      type='button'
+                      onClick={() => setOpenTerm(isOpen ? null : group.term)}
+                      aria-expanded={isOpen}
+                      className='flex w-full items-center justify-between gap-3 bg-slate-50 px-4 py-3 text-left text-sm font-medium text-slate-800 transition hover:bg-slate-100'
                     >
-                      <td className='whitespace-nowrap px-4 py-3'>{director.member.memberCode}</td>
-                      <td className='px-4 py-3 font-medium'>{director.member.name}</td>
-                      <td className='px-4 py-3'>{director.position}</td>
-                      <td className='px-4 py-3'>{director.quota}</td>
-                      <td className='px-4 py-3'>{director.term}</td>
-                      <td className='whitespace-nowrap px-4 py-3'>
-                        {director.fromDate.slice(0, 10)}
-                      </td>
-                      <td className='whitespace-nowrap px-4 py-3'>
-                        {director.toDate?.slice(0, 10) ?? 'Current'}
-                      </td>
-                      <td className='max-w-xs truncate px-4 py-3'>{director.remarks || '-'}</td>
-                      <td className='px-4 py-3'>
-                        <div className='flex justify-end gap-1'>
-                          <Button
-                            type='button'
-                            variant='ghost'
-                            size='icon-sm'
-                            aria-label={`Edit director ${director.member.name}`}
-                            title='Edit director'
-                            onClick={() => {
-                              setEditingDirector(director);
-                              setFormError('');
-                              setIsModalOpen(true);
-                            }}
-                          >
-                            <Pencil />
-                          </Button>
-                          <Button
-                            type='button'
-                            variant='destructive'
-                            size='icon-sm'
-                            aria-label={`Delete director ${director.member.name}`}
-                            title='Delete director'
-                            onClick={() => setDeleteDirectorTarget(director)}
-                          >
-                            <Trash2 />
-                          </Button>
+                      <span>Term {group.term}</span>
+                      <span className='rounded-full bg-white px-2 py-0.5 text-xs text-slate-600'>
+                        {group.records.length} record{group.records.length === 1 ? '' : 's'}
+                      </span>
+                    </button>
+                    {isOpen && (
+                      <div className='border-t border-slate-200 bg-white'>
+                        <div className='overflow-x-auto'>
+                          <table className='min-w-full text-left text-sm'>
+                            <thead className='bg-slate-50 text-slate-600'>
+                              <tr className='border-b border-slate-200'>
+                                <th className='px-4 py-3'>Member code</th>
+                                <th className='px-4 py-3'>Director</th>
+                                <th className='px-4 py-3'>Position</th>
+                                <th className='px-4 py-3'>Quota</th>
+                                <th className='px-4 py-3'>Start date</th>
+                                <th className='px-4 py-3'>End date</th>
+                                <th className='px-4 py-3'>Remarks</th>
+                                <th className='px-4 py-3 text-right'>Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {group.records.map(director => (
+                                <tr
+                                  key={director.id}
+                                  className='border-b border-slate-100 last:border-0 hover:bg-slate-50'
+                                >
+                                  <td className='whitespace-nowrap px-4 py-3'>
+                                    {director.member.memberCode}
+                                  </td>
+                                  <td className='px-4 py-3 font-medium'>{director.member.name}</td>
+                                  <td className='px-4 py-3'>{director.position}</td>
+                                  <td className='px-4 py-3'>{director.quota}</td>
+                                  <td className='whitespace-nowrap px-4 py-3'>
+                                    {director.fromDate.slice(0, 10)}
+                                  </td>
+                                  <td className='whitespace-nowrap px-4 py-3'>
+                                    {director.toDate?.slice(0, 10) ?? 'Current'}
+                                  </td>
+                                  <td className='max-w-xs truncate px-4 py-3'>
+                                    {director.remarks || '-'}
+                                  </td>
+                                  <td className='px-4 py-3'>
+                                    <div className='flex justify-end gap-1'>
+                                      <Button
+                                        type='button'
+                                        variant='ghost'
+                                        size='icon-sm'
+                                        aria-label={`Edit director ${director.member.name}`}
+                                        title='Edit director'
+                                        onClick={() => {
+                                          setEditingDirector(director);
+                                          setFormError('');
+                                          setIsModalOpen(true);
+                                        }}
+                                      >
+                                        <Pencil />
+                                      </Button>
+                                      <Button
+                                        type='button'
+                                        variant='destructive'
+                                        size='icon-sm'
+                                        aria-label={`Delete director ${director.member.name}`}
+                                        title='Delete director'
+                                        onClick={() => setDeleteDirectorTarget(director)}
+                                      >
+                                        <Trash2 />
+                                      </Button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
                         </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </section>
@@ -464,6 +554,7 @@ export default function Directors() {
           <DirectorModal
             director={editingDirector}
             members={members}
+            allDirectors={directors}
             saving={isSaving}
             error={formError}
             onClose={closeModal}

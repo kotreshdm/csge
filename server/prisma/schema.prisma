@@ -256,8 +256,6 @@ model Transaction {
 
   shareAmount           Decimal @default(0) @db.Decimal(15, 2)
   shareFeeAmount        Decimal @default(0) @db.Decimal(15, 2)
-  applicationFeeAmount  Decimal @default(0) @db.Decimal(15, 2)
-  admissionFeeAmount    Decimal @default(0) @db.Decimal(15, 2)
   membershipFeeAmount   Decimal @default(0) @db.Decimal(15, 2)
   siteDepositAmount     Decimal @default(0) @db.Decimal(15, 2)
   welfareFundAmount     Decimal @default(0) @db.Decimal(15, 2)
@@ -414,4 +412,25 @@ model MemberAddressHistory {
   @@index([memberId, toDate])
   @@index([city])
   @@map("member_address_history")
+}
+
+model Site {
+  id                BigInt    @id @default(autoincrement())
+  siteNo            String
+  layoutId          BigInt
+  allottedMemberId  BigInt?
+
+  status            String    @default("AVAILABLE")
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  layout            Layout    @relation(fields: [layoutId], references: [id])
+  allottedMember    Member?   @relation(fields: [allottedMemberId], references: [id])
+
+  @@unique([layoutId, siteNo])
+  @@index([layoutId])
+  @@index([allottedMemberId])
+  @@index([status])
+  @@map("sites")
 }

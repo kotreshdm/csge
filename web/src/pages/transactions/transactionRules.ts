@@ -7,7 +7,145 @@ import {
 } from './transactionConstants';
 
 const ZERO = '0';
-const amountKeys = TRANSACTION_AMOUNT_FIELDS.map(([field]) => field);
+
+export type TransactionAmountField = (typeof TRANSACTION_AMOUNT_FIELDS)[number][0];
+
+export interface TransactionFieldConfig {
+  isValid: boolean;
+  showTotalAmount: boolean;
+  showMember: boolean;
+  requiredMember: boolean;
+  showParty: boolean;
+  requiredParty: boolean;
+  showLayout: boolean;
+  requiredLayout: boolean;
+  amountFields: readonly TransactionAmountField[];
+  allowPaymentDetails: boolean;
+}
+
+const shareCreditAmounts: readonly TransactionAmountField[] = [
+  'shareAmount',
+  'shareFeeAmount',
+  'membershipFeeAmount',
+  'welfareFundAmount',
+  'booksFormsAmount',
+  'miscellaneousAmount',
+  'otherAmount',
+];
+
+function normalizedSubtype(value: string) {
+  return value
+    .trim()
+    .toUpperCase()
+    .replace(/[\s-]+/g, '_');
+}
+
+export function getTransactionFormConfig(
+  type: TransactionPayload['type'],
+  subType: string,
+): TransactionFieldConfig {
+  const subtype = normalizedSubtype(subType);
+  const config = {
+    isValid: true,
+    showTotalAmount: false,
+    showMember: false,
+    requiredMember: false,
+    showParty: false,
+    requiredParty: false,
+    showLayout: false,
+    requiredLayout: false,
+    amountFields: ['otherAmount'] as readonly TransactionAmountField[],
+    allowPaymentDetails: true,
+  };
+
+  if (type !== 'CREDIT' && type !== 'DEBIT') {
+    return { ...config, isValid: false, amountFields: [] };
+  }
+
+  if (subtype === 'SHARE') {
+    return {
+      ...config,
+      showTotalAmount: type === 'CREDIT',
+      showMember: true,
+      requiredMember: true,
+      amountFields: type === 'CREDIT' ? shareCreditAmounts : ['shareAmount'],
+    };
+  }
+
+  if (subtype === 'SITE') {
+    return {
+      ...config,
+      showMember: true,
+      requiredMember: true,
+      showLayout: true,
+      requiredLayout: true,
+      amountFields: ['siteDepositAmount'],
+    };
+  }
+
+  if (subtype === 'ADVANCE') {
+    return {
+      ...config,
+      showParty: true,
+      requiredParty: true,
+      showLayout: true,
+      requiredLayout: true,
+    };
+  }
+
+  if (subtype === 'BANK' || subtype === 'EXPENSE') {
+    if (subtype === 'EXPENSE' && type !== 'DEBIT') {
+      return { ...config, isValid: false, amountFields: [] };
+    }
+    return { ...config, showParty: true, requiredParty: true };
+  }
+
+  if (subtype === 'OTHER') {
+    return { ...config, showMember: true, showParty: true };
+  }
+
+  return { ...config, isValid: false, amountFields: [] };
+}
+
+export function getTransactionSubtypes(type: TransactionPayload['type']) {
+  return TRANSACTION_SUBTYPE_SUGGESTIONS.filter(
+    subtype => subtype !== 'EXPENSE' || type === 'DEBIT',
+  );
+}
+
+export function resetTransactionDependencies(
+  previous: TransactionPayload,
+  type: TransactionPayload['type'],
+  subType: string,
+): TransactionPayload {
+  const config = getTransactionFormConfig(type, subType);
+  return normalizeTransaction({
+    ...previous,
+    type,
+    subType,
+    memberId: null,
+    partyId: null,
+    layoutId: null,
+    shareAmount: '',
+    shareFeeAmount: '',
+    membershipFeeAmount: '',
+    siteDepositAmount: '',
+    welfareFundAmount: '',
+    booksFormsAmount: '',
+    miscellaneousAmount: '',
+    otherAmount: '',
+    totalAmount: ZERO,
+    receiptNo: null,
+    ...(config.allowPaymentDetails
+      ? {}
+      : {
+          paymentMode: null,
+          chequeNo: null,
+          chequeDate: null,
+          bankReferenceNo: null,
+        }),
+  });
+}
 
 export function inputValue(value: string | number | null | undefined) {
   return value === null || value === undefined ? '' : String(value);
@@ -23,26 +161,24 @@ export function getLocalDateInputValue(date: Date = new Date()) {
 export function blankTransaction(memberId = ''): TransactionPayload {
   return {
     transactionDate: getLocalDateInputValue(),
-    cashbookNo: '',
-    cashbookPage: '',
+    cashbookNo: '1',
+    cashbookPage: '1',
     type: 'CREDIT',
     subType: '',
     memberId: null,
     partyId: null,
     layoutId: null,
-    shareAmount: ZERO,
-    shareFeeAmount: ZERO,
-    applicationFeeAmount: ZERO,
-    admissionFeeAmount: ZERO,
-    membershipFeeAmount: ZERO,
-    siteDepositAmount: ZERO,
-    welfareFundAmount: ZERO,
-    booksFormsAmount: ZERO,
-    miscellaneousAmount: ZERO,
-    otherAmount: ZERO,
+    shareAmount: '',
+    shareFeeAmount: '',
+    membershipFeeAmount: '',
+    siteDepositAmount: '',
+    welfareFundAmount: '',
+    booksFormsAmount: '',
+    miscellaneousAmount: '',
+    otherAmount: '',
     totalAmount: ZERO,
     receiptNo: null,
-    paymentMode: null,
+    paymentMode: 'CASH',
     chequeNo: null,
     chequeDate: null,
     bankReferenceNo: null,
@@ -51,63 +187,47 @@ export function blankTransaction(memberId = ''): TransactionPayload {
   };
 }
 
-function subtypeKey(value: string) {
-  return value
-    .trim()
-    .toUpperCase()
-    .replace(/[\\s-]+/g, '_');
-}
-
-export function isMemberVisible(subType: string) {
-  const subtype = subtypeKey(subType);
-  return subtype.includes('SHARE') || subtype.includes('SITE') || subtype === 'LAYOUT_TRANSFER';
-}
-
-export function isPartyVisible(subType: string) {
-  const subtype = subtypeKey(subType);
-  return (
-    subtype.includes('ADVANCE') ||
-    subtype === 'SALARY' ||
-    subtype === 'RENT' ||
-    subtype.startsWith('BANK_')
-  );
-}
-
-export function isLayoutVisible(subType: string) {
-  const subtype = subtypeKey(subType);
-  return subtype.includes('SITE') || subtype.includes('LAYOUT') || subtype.includes('ADVANCE');
-}
-
 function normalizePartyType(value: string) {
   return value
     .trim()
     .toUpperCase()
-    .replace(/[\\s_-]+/g, '');
+    .replace(/[\s_-]+/g, '');
+}
+
+function dateOnly(value: string | null | undefined) {
+  return value?.slice(0, 10) ?? '';
 }
 
 export function getFilteredParties(
-  parties: Array<{ id: string; name: string; partyType: string }>,
+  parties: Array<{
+    id: string;
+    name: string;
+    partyType: string;
+    startDate: string;
+    endDate: string | null;
+  }>,
   form: TransactionPayload,
 ) {
-  const subtype = subtypeKey(form.subType);
-  if (!isPartyVisible(subtype)) return [];
-  const allowedType =
-    subtype === 'SALARY'
-      ? 'EMPLOYEE'
-      : subtype === 'RENT'
-        ? 'LANDLORD'
-        : subtype.startsWith('BANK_')
-          ? 'BANK'
-          : null;
-  return allowedType
-    ? parties.filter(party => normalizePartyType(party.partyType) === allowedType)
-    : parties;
+  const subtype = normalizedSubtype(form.subType);
+  if (!getTransactionFormConfig(form.type, subtype).showParty) return [];
+  const allowedType = subtype === 'BANK' || subtype === 'EXPENSE' ? subtype : null;
+  const transactionDate = dateOnly(form.transactionDate);
+  return parties.filter(party => {
+    const startDate = dateOnly(party.startDate);
+    const endDate = dateOnly(party.endDate);
+    const isActiveOnTransactionDate =
+      Boolean(transactionDate && startDate) &&
+      startDate <= transactionDate &&
+      (!endDate || transactionDate <= endDate);
+    const hasAllowedType = !allowedType || normalizePartyType(party.partyType) === allowedType;
+    return isActiveOnTransactionDate && hasAllowedType;
+  });
 }
 
 function toMinorUnits(value: string | number | null | undefined) {
   const text = inputValue(value).trim();
   if (!text) return 0n;
-  const match = /^(\\d+)(?:\\.(\\d{0,2}))?$/.exec(text);
+  const match = /^(\d+)(?:\.(\d{0,2}))?$/.exec(text);
   if (!match) return 0n;
   return BigInt(match[1]) * 100n + BigInt((match[2] ?? '').padEnd(2, '0'));
 }
@@ -117,7 +237,8 @@ function fromMinorUnits(value: bigint) {
 }
 
 export function calculateTotalAmount(form: TransactionPayload) {
-  const total = amountKeys.reduce((sum, field) => sum + toMinorUnits(form[field]), 0n);
+  const config = getTransactionFormConfig(form.type, form.subType);
+  const total = config.amountFields.reduce((sum, field) => sum + toMinorUnits(form[field]), 0n);
   return fromMinorUnits(total);
 }
 
@@ -132,9 +253,13 @@ export function normalizeTransaction(form: TransactionPayload): TransactionPaylo
     subType: typeof form.subType === 'string' ? form.subType : '',
   };
 
-  if (!TRANSACTION_TYPES.includes(next.type)) next.type = 'CREDIT';
-  for (const field of amountKeys) {
-    if (next[field] === '') next[field] = ZERO;
+  if (next.type !== 'CREDIT' && next.type !== 'DEBIT') next.type = 'CREDIT';
+  if (next.paymentMode !== 'CHEQUE') {
+    next.chequeNo = null;
+    next.chequeDate = null;
+  }
+  if (next.paymentMode !== 'BANK_TRANSFER') {
+    next.bankReferenceNo = null;
   }
   next.totalAmount = calculateTotalAmount(next);
   return next;
@@ -146,6 +271,10 @@ export function buildTransactionPayload(
   isEditing: boolean,
 ): TransactionPayload {
   const next = normalizeTransaction(form);
+  const config = getTransactionFormConfig(next.type, next.subType);
+  const activeAmounts = new Set(config.amountFields);
+  const chequePayment = next.paymentMode === 'CHEQUE';
+  const bankTransfer = next.paymentMode === 'BANK_TRANSFER';
   return {
     transactionDate: next.transactionDate,
     cashbookNo: next.cashbookNo === '' || next.cashbookNo === null ? null : Number(next.cashbookNo),
@@ -153,25 +282,31 @@ export function buildTransactionPayload(
       next.cashbookPage === '' || next.cashbookPage === null ? null : Number(next.cashbookPage),
     type: next.type,
     subType: next.subType.trim(),
-    memberId: next.memberId || null,
-    partyId: next.partyId || null,
-    layoutId: next.layoutId || null,
-    shareAmount: next.shareAmount || ZERO,
-    shareFeeAmount: next.shareFeeAmount || ZERO,
-    applicationFeeAmount: next.applicationFeeAmount || ZERO,
-    admissionFeeAmount: next.admissionFeeAmount || ZERO,
-    membershipFeeAmount: next.membershipFeeAmount || ZERO,
-    siteDepositAmount: next.siteDepositAmount || ZERO,
-    welfareFundAmount: next.welfareFundAmount || ZERO,
-    booksFormsAmount: next.booksFormsAmount || ZERO,
-    miscellaneousAmount: next.miscellaneousAmount || ZERO,
-    otherAmount: next.otherAmount || ZERO,
+    memberId: config.showMember ? next.memberId || null : null,
+    partyId: config.showParty ? next.partyId || null : null,
+    layoutId: config.showLayout ? next.layoutId || null : null,
+    shareAmount: activeAmounts.has('shareAmount') ? next.shareAmount || ZERO : ZERO,
+    shareFeeAmount: activeAmounts.has('shareFeeAmount') ? next.shareFeeAmount || ZERO : ZERO,
+    membershipFeeAmount: activeAmounts.has('membershipFeeAmount')
+      ? next.membershipFeeAmount || ZERO
+      : ZERO,
+    siteDepositAmount: activeAmounts.has('siteDepositAmount')
+      ? next.siteDepositAmount || ZERO
+      : ZERO,
+    welfareFundAmount: activeAmounts.has('welfareFundAmount')
+      ? next.welfareFundAmount || ZERO
+      : ZERO,
+    booksFormsAmount: activeAmounts.has('booksFormsAmount') ? next.booksFormsAmount || ZERO : ZERO,
+    miscellaneousAmount: activeAmounts.has('miscellaneousAmount')
+      ? next.miscellaneousAmount || ZERO
+      : ZERO,
+    otherAmount: activeAmounts.has('otherAmount') ? next.otherAmount || ZERO : ZERO,
     totalAmount: calculateTotalAmount(next),
     receiptNo: next.receiptNo || null,
     paymentMode: next.paymentMode || null,
-    chequeNo: next.chequeNo || null,
-    chequeDate: next.chequeDate || null,
-    bankReferenceNo: next.bankReferenceNo || null,
+    chequeNo: chequePayment ? next.chequeNo || null : null,
+    chequeDate: chequePayment ? next.chequeDate || null : null,
+    bankReferenceNo: bankTransfer ? next.bankReferenceNo || null : null,
     remarks: next.remarks || null,
     ...(isEditing ? { updatedBy: actorMemberId } : { createdBy: actorMemberId }),
   };

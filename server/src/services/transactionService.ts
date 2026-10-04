@@ -19,7 +19,7 @@ function formatLocalDateInput(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
-const transactionTypes = ["CREDIT", "DEBIT"] as const;
+const transactionTypes = ["CREDIT", "DEBIT", "LAYOUT_EXPENSE"] as const;
 const paymentModes = [
   "CASH",
   "CHEQUE",
@@ -30,8 +30,6 @@ const paymentModes = [
 const amountFields = [
   "shareAmount",
   "shareFeeAmount",
-  "applicationFeeAmount",
-  "admissionFeeAmount",
   "membershipFeeAmount",
   "siteDepositAmount",
   "welfareFundAmount",
@@ -39,6 +37,76 @@ const amountFields = [
   "miscellaneousAmount",
   "otherAmount",
 ] as const;
+
+function transactionConfig(type: TransactionType, subType: string) {
+  const subtype = subType
+    .trim()
+    .toUpperCase()
+    .replace(/[\s-]+/g, "_");
+  if (type === "LAYOUT_EXPENSE") {
+    return {
+      member: false,
+      party: true,
+      requiredParty: false,
+      layout: true,
+      amounts: ["otherAmount"] as const,
+    };
+  }
+  if (subtype === "SHARE" || subtype === "SHARE_WITHDRAWAL") {
+    return {
+      member: true,
+      party: false,
+      requiredParty: false,
+      layout: false,
+      amounts:
+        type === "CREDIT" && subtype === "SHARE"
+          ? ([
+              "shareAmount",
+              "shareFeeAmount",
+              "membershipFeeAmount",
+              "welfareFundAmount",
+              "booksFormsAmount",
+              "miscellaneousAmount",
+              "otherAmount",
+            ] as const)
+          : (["shareAmount"] as const),
+    };
+  }
+  if (["SITE", "SITE_DEPOSIT", "LAYOUT", "LAYOUT_TRANSFER"].includes(subtype)) {
+    return {
+      member: true,
+      party: false,
+      requiredParty: false,
+      layout: true,
+      amounts: ["siteDepositAmount"] as const,
+    };
+  }
+  if (subtype === "ADVANCE") {
+    return {
+      member: false,
+      party: true,
+      requiredParty: true,
+      layout: true,
+      amounts: ["otherAmount"] as const,
+    };
+  }
+  if (subtype === "BANK") {
+    return {
+      member: false,
+      party: true,
+      requiredParty: true,
+      layout: false,
+      amounts: ["otherAmount"] as const,
+    };
+  }
+  return {
+    member: false,
+    party: true,
+    requiredParty: false,
+    layout: false,
+    amounts: ["otherAmount"] as const,
+  };
+}
 
 function optionalInteger(value: unknown, fieldName: string): number | null {
   if (value === undefined || value === null || value === "") return null;
@@ -164,13 +232,21 @@ function transactionData(input: TransactionInput) {
   validateInputFields(input);
   const type = enumValue<TransactionType>(input.type, "Type", transactionTypes);
   const subType = requiredString(input.subType, "Sub-type");
+  const config = transactionConfig(type, subType);
+  const activeAmountFields = new Set<string>(config.amounts);
   const amounts = Object.fromEntries(
-    amountFields.map((field) => [field, amount(input[field], field)]),
+    amountFields.map((field) => [
+      field,
+      amount(activeAmountFields.has(field) ? input[field] : "0", field),
+    ]),
   ) as Record<(typeof amountFields)[number], Prisma.Decimal>;
-  const calculatedTotal = amountFields.reduce(
+  const calculatedTotal = config.amounts.reduce(
     (total, field) => total.plus(amounts[field]),
     new Prisma.Decimal(0),
   );
+  if (!calculatedTotal.greaterThan(0)) {
+    throw new AppError(400, "Total amount must be greater than zero.");
+  }
   const suppliedTotal = amount(input.totalAmount, "Total amount");
   if (!calculatedTotal.equals(suppliedTotal)) {
     throw new AppError(
@@ -179,29 +255,62 @@ function transactionData(input: TransactionInput) {
     );
   }
 
+  const memberId = config.member ? parseId(input.memberId, "Member ID") : null;
+  if (config.member && memberId === null) {
+    throw new AppError(400, "Member ID is required for this transaction.");
+  }
+  const partyId = config.party ? parseId(input.partyId, "Party ID") : null;
+  if (config.requiredParty && partyId === null) {
+    throw new AppError(400, "Party ID is required for this transaction.");
+  }
+  const layoutId = config.layout ? parseId(input.layoutId, "Layout ID") : null;
+  if (config.layout && layoutId === null) {
+    throw new AppError(400, "Layout ID is required for this transaction.");
+  }
+
+  const paymentMode = optionalEnum<PaymentMode>(
+    input.paymentMode,
+    "Payment mode",
+    paymentModes,
+  );
+  const chequeNo =
+    paymentMode === "CHEQUE"
+      ? optionalString(input.chequeNo, "Cheque number")
+      : null;
+  const chequeDate =
+    paymentMode === "CHEQUE"
+      ? optionalDate(input.chequeDate, "Cheque date")
+      : null;
+  const bankReferenceNo =
+    paymentMode === "BANK_TRANSFER"
+      ? optionalString(input.bankReferenceNo, "Bank reference number")
+      : null;
+  if (paymentMode === "CHEQUE" && (!chequeNo || !chequeDate)) {
+    throw new AppError(
+      400,
+      "Cheque number and date are required for cheque payment.",
+    );
+  }
+  if (paymentMode === "BANK_TRANSFER" && !bankReferenceNo) {
+    throw new AppError(400, "Bank reference is required for bank transfer.");
+  }
+
   return {
     transactionDate: requiredDate(input.transactionDate, "Transaction date"),
     cashbookNo: optionalInteger(input.cashbookNo, "Cashbook number"),
     cashbookPage: optionalInteger(input.cashbookPage, "Cashbook page"),
     type,
     subType,
-    memberId: parseId(input.memberId, "Member ID"),
-    partyId: parseId(input.partyId, "Party ID"),
-    layoutId: parseId(input.layoutId, "Layout ID"),
+    memberId,
+    partyId,
+    layoutId,
     ...amounts,
     totalAmount: calculatedTotal,
     receiptNo: optionalString(input.receiptNo, "Receipt number"),
-    paymentMode: optionalEnum<PaymentMode>(
-      input.paymentMode,
-      "Payment mode",
-      paymentModes,
-    ),
-    chequeNo: optionalString(input.chequeNo, "Cheque number"),
-    chequeDate: optionalDate(input.chequeDate, "Cheque date"),
-    bankReferenceNo: optionalString(
-      input.bankReferenceNo,
-      "Bank reference number",
-    ),
+    paymentMode,
+    chequeNo,
+    chequeDate,
+    bankReferenceNo,
     remarks: optionalString(input.remarks, "Remarks"),
   };
 }

@@ -31,6 +31,38 @@ function parseId(id: string): bigint {
   return BigInt(id);
 }
 
+function parsePositiveWholeNumber(value: unknown, fieldName: string): number {
+  if (value === undefined || value === null) {
+    throw new AppError(400, `${fieldName} is required.`);
+  }
+
+  if (typeof value === "number") {
+    if (!Number.isInteger(value) || value < 1 || !Number.isSafeInteger(value)) {
+      throw new AppError(400, `${fieldName} must be a positive whole number.`);
+    }
+    return value;
+  }
+
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      throw new AppError(400, `${fieldName} is required.`);
+    }
+
+    if (
+      !/^\d+$/.test(trimmed) ||
+      Number(trimmed) < 1 ||
+      !Number.isSafeInteger(Number(trimmed))
+    ) {
+      throw new AppError(400, `${fieldName} must be a positive whole number.`);
+    }
+
+    return Number(trimmed);
+  }
+
+  throw new AppError(400, `${fieldName} is required.`);
+}
+
 function directorData(input: DirectorInput) {
   const memberIdText = requiredString(input.memberId, "Member");
   if (!/^\d+$/.test(memberIdText) || BigInt(memberIdText) <= 0n) {
@@ -43,16 +75,13 @@ function directorData(input: DirectorInput) {
     throw new AppError(400, "End date cannot be earlier than start date.");
   }
 
-  const termText = requiredString(input.term, "Term");
-  if (!/^\d+$/.test(termText) || Number(termText) < 1 || !Number.isSafeInteger(Number(termText))) {
-    throw new AppError(400, "Term must be a positive whole number.");
-  }
+  const term = parsePositiveWholeNumber(input.term, "Term");
 
   return {
     memberId: BigInt(memberIdText),
     position: requiredString(input.position, "Position"),
     quota: requiredString(input.quota, "Quota"),
-    term: Number(termText),
+    term,
     fromDate,
     toDate,
     remarks: optionalString(input.remarks, "Remarks"),

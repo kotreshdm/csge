@@ -24,6 +24,11 @@ export default function TransactionsList() {
       transaction.subType,
       transaction.type,
       transaction.transactionNo,
+      transaction.party?.name ?? '',
+      transaction.member?.name ?? '',
+      transaction.member?.memberCode ?? '',
+      transaction.layout?.name ?? '',
+      transaction.layout?.layoutCode ?? '',
     ].some(value => value.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase())),
   );
 
@@ -80,6 +85,7 @@ export default function TransactionsList() {
                     <th className='px-4 py-3'>Date</th>
                     <th className='px-4 py-3'>Cashbook</th>
                     <th className='px-4 py-3'>Type</th>
+                    <th className='px-4 py-3'>Related entity</th>
                     <th className='px-4 py-3 text-right'>Amount</th>
                     <th className='px-4 py-3 text-right'>Actions</th>
                   </tr>
@@ -88,7 +94,11 @@ export default function TransactionsList() {
                   {filtered.map(transaction => (
                     <tr
                       key={transaction.id}
-                      className='border-b border-slate-100 last:border-0 hover:bg-slate-50'
+                      className={`border-b border-slate-100 last:border-0 ${
+                        transaction.type === 'CREDIT'
+                          ? 'bg-green-50 hover:bg-green-100'
+                          : 'bg-red-50 hover:bg-red-100'
+                      }`}
                     >
                       <td className='whitespace-nowrap px-4 py-3'>
                         {transaction.transactionDate.slice(0, 10)}
@@ -101,6 +111,43 @@ export default function TransactionsList() {
                         <span className='ml-2 text-slate-500'>{transaction.subType}</span>
                       </td>
                       <td className='px-4 py-3'>{transaction.type}</td>
+                      <td className='px-4 py-3'>
+                        <div className='space-y-0.5'>
+                          {transaction.party ? (
+                            <div>
+                              <span className='font-medium text-slate-900'>
+                                {transaction.party.name}
+                              </span>
+                              <span className='ml-1 text-xs text-slate-500'>
+                                Party · {transaction.party.partyType}
+                              </span>
+                            </div>
+                          ) : null}
+                          {transaction.member ? (
+                            <div>
+                              <span className='font-medium text-slate-900'>
+                                {transaction.member.name}
+                              </span>
+                              <span className='ml-1 text-xs text-slate-500'>
+                                Member · {transaction.member.memberCode}
+                              </span>
+                            </div>
+                          ) : null}
+                          {transaction.layout ? (
+                            <div>
+                              <span className='font-medium text-slate-900'>
+                                {transaction.layout.name}
+                              </span>
+                              <span className='ml-1 text-xs text-slate-500'>
+                                Layout · {transaction.layout.layoutCode}
+                              </span>
+                            </div>
+                          ) : null}
+                          {!transaction.party && !transaction.member && !transaction.layout ? (
+                            <span className='text-slate-400'>—</span>
+                          ) : null}
+                        </div>
+                      </td>
                       <td className='whitespace-nowrap px-4 py-3 text-right'>
                         {Number(transaction.totalAmount).toLocaleString('en-IN', {
                           minimumFractionDigits: 2,
@@ -114,9 +161,7 @@ export default function TransactionsList() {
                             size='icon-sm'
                             aria-label={`Edit cashbook entry ${transaction.cashbookNo ?? ''}`}
                             title='Edit transaction'
-                            onClick={() =>
-                              navigate(ROUTES.ADMIN.TRANSACTIONS_EDIT(transaction.id))
-                            }
+                            onClick={() => navigate(ROUTES.ADMIN.TRANSACTIONS_EDIT(transaction.id))}
                           >
                             <Pencil />
                           </Button>

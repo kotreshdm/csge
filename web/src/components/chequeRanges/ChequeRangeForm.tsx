@@ -68,11 +68,13 @@ export default function ChequeRangeForm({
             className='h-10 rounded-md border border-slate-300 bg-white px-3 font-normal text-slate-900 outline-none focus:border-teal-700 focus:ring-2 focus:ring-teal-700/15'
           >
             <option value=''>Select party</option>
-            {parties.map(party => (
-              <option key={party.id} value={party.id}>
-                {party.name} · {party.partyType}
-              </option>
-            ))}
+            {parties
+              .filter(p => p.partyType === 'BANK')
+              .map(party => (
+                <option key={party.id} value={party.id}>
+                  {party.name}
+                </option>
+              ))}
           </select>
         </label>
         <label className='grid gap-1.5 text-sm font-medium text-slate-700'>

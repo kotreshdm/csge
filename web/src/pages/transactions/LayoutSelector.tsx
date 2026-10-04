@@ -8,6 +8,7 @@ interface LayoutSelectorProps {
   layouts: LayoutOption[];
   field: 'layoutId';
   label: string;
+  required?: boolean;
   disabled?: boolean;
   onFieldChange: <K extends keyof TransactionPayload>(
     field: K,
@@ -20,13 +21,15 @@ export function LayoutSelector({
   layouts,
   field,
   label,
+  required = false,
   disabled = false,
   onFieldChange,
 }: LayoutSelectorProps) {
   return (
     <label className='grid gap-1.5 text-sm font-medium text-slate-700'>
-      <span>{label}</span>
+      <span>{label}{required ? <span className='ml-1 text-rose-600'>*</span> : null}</span>
       <select
+        required={required}
         value={inputValue(form[field])}
         disabled={disabled}
         onChange={event => onFieldChange(field, event.target.value || (null as never))}

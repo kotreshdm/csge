@@ -5,10 +5,19 @@ import {
   getFinancialYearTransactions,
   getDashboardSummary,
 } from "../services/dashboardService.js";
+import { getDashboardPositions } from "../services/dashboardPositionService.js";
 import { AppError } from "../utils/AppError.js";
 import { sendSuccess } from "../utils/response.js";
 
 export const dashboardController = {
+  getPositions: async (_request: FastifyRequest, reply: FastifyReply) =>
+    sendSuccess(
+      reply,
+      200,
+      "Dashboard positions fetched successfully.",
+      await getDashboardPositions(),
+    ),
+
   getFinancialYears: async (_request: FastifyRequest, reply: FastifyReply) =>
     sendSuccess(reply, 200, "Financial years fetched successfully.", {
       items: await getAvailableFinancialYears(),

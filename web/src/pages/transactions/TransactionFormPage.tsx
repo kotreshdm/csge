@@ -20,28 +20,20 @@ import { Button } from '@/components/ui/button';
 import { ROUTES } from '../../const/routs';
 import type { RootState } from '../../store';
 
-import { AdvanceTransactionFields } from './AdvanceTransactionFields';
-import { AssetTransactionFields } from './AssetTransactionFields';
-import { BankTransactionFields } from './BankTransactionFields';
 import { CashbookReference } from './CashbookReference';
 import { CommonTransactionFields } from './CommonTransactionFields';
-import { ExpenseTransactionFields } from './ExpenseTransactionFields';
-import { IncomeTransactionFields } from './IncomeTransactionFields';
 import { LayoutSelector } from './LayoutSelector';
-import { LayoutTransactionFields } from './LayoutTransactionFields';
 import { MemberSelector } from './MemberSelector';
-import { OtherTransactionFields } from './OtherTransactionFields';
 import { PartySelector } from './PartySelector';
 import { PaymentFields } from './PaymentFields';
-import { ShareTransactionFields } from './ShareTransactionFields';
+import { TransactionAmountFields } from './TransactionAmountFields';
 import {
   blankTransaction,
   buildTransactionPayload,
   getFilteredParties,
-  isLayoutVisible,
-  isMemberVisible,
-  isPartyVisible,
+  getTransactionFormConfig,
   normalizeTransaction,
+  resetTransactionDependencies,
 } from './transactionRules';
 import { validateTransaction } from './transactionValidation';
 
@@ -137,16 +129,22 @@ export default function TransactionFormPage({ mode }: TransactionFormPageProps) 
   const layouts = layoutsData?.data.items ?? [];
   const transaction = transactionData?.data;
   const filteredParties = useMemo(() => getFilteredParties(parties, form), [parties, form]);
+  const fieldConfig = getTransactionFormConfig(form.type, form.subType);
   const selectedMember = useMemo(
     () => members.find(member => member.memberId === form.memberId),
     [members, form.memberId],
   );
+  const isWaitingForRequiredSelection =
+    !form.subType ||
+    (fieldConfig.requiredMember && !form.memberId) ||
+    (fieldConfig.requiredParty && !form.partyId) ||
+    (fieldConfig.requiredLayout && !form.layoutId);
 
   const lastShareInTransaction = useMemo(() => {
     const transactions = transactionListData?.data.items ?? [];
     return (
       [...transactions]
-        .filter(transaction => transaction.type === 'SHARE' && transaction.direction === 'IN')
+        .filter(transaction => transaction.type === 'CREDIT' && transaction.subType === 'SHARE')
         .sort((left, right) => Number(BigInt(right.id)) - Number(BigInt(left.id)))
         .at(0) ?? null
     );
@@ -157,7 +155,13 @@ export default function TransactionFormPage({ mode }: TransactionFormPageProps) 
       return;
     }
 
-    setForm(normalizeTransaction({ ...transaction, updatedBy: user?.memberId ?? null }));
+    setForm(
+      normalizeTransaction({
+        ...transaction,
+        createdBy: transaction.createdBy ?? undefined,
+        updatedBy: user?.memberId ?? null,
+      }),
+    );
   }, [transaction, user?.memberId]);
 
   useEffect(() => {
@@ -178,10 +182,10 @@ export default function TransactionFormPage({ mode }: TransactionFormPageProps) 
       normalizeTransaction({
         ...previous,
         cashbookNo:
-          previous.cashbookNo === '' ? (lastTransaction.cashbookNo ?? '') : previous.cashbookNo,
+          previous.cashbookNo === '' ? (lastTransaction.cashbookNo ?? '1') : previous.cashbookNo,
         cashbookPage:
           previous.cashbookPage === ''
-            ? (lastTransaction.cashbookPage ?? '')
+            ? (lastTransaction.cashbookPage ?? '1')
             : previous.cashbookPage,
         transactionDate: hasSelectedTransactionDate.current
           ? previous.transactionDate
@@ -192,7 +196,7 @@ export default function TransactionFormPage({ mode }: TransactionFormPageProps) 
   }, [isEditing, transactionListData]);
 
   useEffect(() => {
-    if (isEditing || form.direction !== 'IN' || form.type !== 'SHARE' || !selectedMember) {
+    if (isEditing || form.type !== 'CREDIT' || form.subType !== 'SHARE' || !selectedMember) {
       return;
     }
 
@@ -202,15 +206,20 @@ export default function TransactionFormPage({ mode }: TransactionFormPageProps) 
         receiptNo: selectedMember.recieptNo ?? '',
       }),
     );
-  }, [form.direction, form.type, isEditing, selectedMember]);
+  }, [form.subType, form.type, isEditing, selectedMember]);
 
   useEffect(() => {
-    if (isEditing || form.type !== 'SHARE' || form.direction !== 'IN' || !lastShareInTransaction) {
+    if (
+      isEditing ||
+      form.type !== 'CREDIT' ||
+      form.subType !== 'SHARE' ||
+      !lastShareInTransaction
+    ) {
       return;
     }
 
     setForm(previous => {
-      if (previous.type !== 'SHARE' || previous.direction !== 'IN') {
+      if (previous.type !== 'CREDIT' || previous.subType !== 'SHARE') {
         return previous;
       }
 
@@ -243,12 +252,31 @@ export default function TransactionFormPage({ mode }: TransactionFormPageProps) 
 
       return normalizeTransaction({ ...previous, ...defaults });
     });
-  }, [form.direction, form.type, isEditing, lastShareInTransaction]);
+  }, [form.subType, form.type, isEditing, lastShareInTransaction]);
 
   const updateField = <K extends keyof TransactionPayload>(
     field: K,
     value: TransactionPayload[K],
   ) => {
+    if (field === 'subType' && value !== form.subType) {
+      setMemberLookup('');
+      setIsMemberOptionsOpen(false);
+      setForm(previous => resetTransactionDependencies(previous, previous.type, String(value)));
+      return;
+    }
+    if (field === 'paymentMode' && value !== form.paymentMode) {
+      const paymentMode = value as TransactionPayload['paymentMode'];
+      setForm(previous =>
+        normalizeTransaction({
+          ...previous,
+          paymentMode,
+          chequeNo: paymentMode === 'CHEQUE' ? previous.chequeNo : null,
+          chequeDate: paymentMode === 'CHEQUE' ? previous.chequeDate : null,
+          bankReferenceNo: paymentMode === 'BANK_TRANSFER' ? previous.bankReferenceNo : null,
+        }),
+      );
+      return;
+    }
     if (field === 'transactionDate') {
       hasSelectedTransactionDate.current = true;
     }
@@ -256,20 +284,24 @@ export default function TransactionFormPage({ mode }: TransactionFormPageProps) 
   };
 
   const handleTypeChange = (value: TransactionPayload['type']) => {
-    setForm(previous => normalizeTransaction({ ...previous, type: value }));
-  };
-
-  const handleDirectionChange = (value: TransactionPayload['direction']) => {
-    setForm(previous => normalizeTransaction({ ...previous, direction: value }));
+    setMemberLookup('');
+    setIsMemberOptionsOpen(false);
+    setForm(previous => resetTransactionDependencies(previous, value, ''));
   };
 
   const selectMember = (memberId: string) => {
     const member = members.find(candidate => candidate.memberId === memberId);
+    const joinDate = member?.joinDate?.slice(0, 10);
+    if (joinDate) {
+      hasSelectedTransactionDate.current = true;
+    }
+
     setForm(previous =>
       normalizeTransaction({
         ...previous,
         memberId: memberId || null,
-        ...(member && !isEditing && previous.direction === 'IN' && previous.type === 'SHARE'
+        ...(joinDate ? { transactionDate: joinDate } : {}),
+        ...(member && !isEditing && previous.type === 'CREDIT' && previous.subType === 'SHARE'
           ? {
               receiptNo: member.recieptNo ?? '',
             }
@@ -308,31 +340,6 @@ export default function TransactionFormPage({ mode }: TransactionFormPageProps) 
       toast.error(saveError instanceof Error ? saveError.message : 'Unable to save transaction.');
     } finally {
       setIsSaving(false);
-    }
-  };
-
-  const renderTypeSpecificFields = () => {
-    switch (form.type) {
-      case 'SHARE':
-        return <ShareTransactionFields form={form} onFieldChange={updateField} />;
-      case 'LAYOUT':
-        return (
-          <LayoutTransactionFields form={form} layouts={layouts} onFieldChange={updateField} />
-        );
-      case 'BANK':
-        return <BankTransactionFields form={form} onFieldChange={updateField} />;
-      case 'EXPENSE':
-        return <ExpenseTransactionFields form={form} onFieldChange={updateField} />;
-      case 'INCOME':
-        return <IncomeTransactionFields form={form} onFieldChange={updateField} />;
-      case 'ADVANCE':
-        return <AdvanceTransactionFields form={form} onFieldChange={updateField} />;
-      case 'ASSET':
-        return <AssetTransactionFields form={form} onFieldChange={updateField} />;
-      case 'OTHER':
-        return <OtherTransactionFields form={form} onFieldChange={updateField} />;
-      default:
-        return null;
     }
   };
 
@@ -377,17 +384,20 @@ export default function TransactionFormPage({ mode }: TransactionFormPageProps) 
               <div className='space-y-5'>
                 <CommonTransactionFields
                   form={form}
+                  otherFieldsDisabled={isWaitingForRequiredSelection}
                   onFieldChange={updateField}
-                  onDirectionChange={handleDirectionChange}
                   onTypeChange={handleTypeChange}
                 />
 
-                <section className='border-t border-slate-200 pt-4'>
-                  <FormSectionHeading title='Member & layout' color='blue' />
-                  <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-3'>
-                    {isMemberVisible(form.type) ? (
+                {form.subType &&
+                (fieldConfig.showMember || fieldConfig.showParty || fieldConfig.showLayout) ? (
+                  <section className='border-t border-slate-200 pt-4'>
+                    <FormSectionHeading title='Transaction parties' color='blue' />
+                    <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-3'>
+                    {fieldConfig.showMember ? (
                       <MemberSelector
                         form={form}
+                        required={fieldConfig.requiredMember}
                         members={members}
                         memberLookup={memberLookup}
                         isMemberOptionsOpen={isMemberOptionsOpen}
@@ -398,59 +408,68 @@ export default function TransactionFormPage({ mode }: TransactionFormPageProps) 
                       />
                     ) : null}
 
-                    {isPartyVisible(form.type) ? (
+                    {fieldConfig.showParty ? (
                       <PartySelector
                         form={form}
                         parties={filteredParties}
+                        required={fieldConfig.requiredParty}
                         onFieldChange={updateField}
                       />
                     ) : null}
 
-                    {isLayoutVisible(form.type) && form.type !== 'LAYOUT' ? (
+                    {fieldConfig.showLayout ? (
                       <LayoutSelector
                         form={form}
                         layouts={layouts}
                         field='layoutId'
                         label='Layout'
+                        required={fieldConfig.requiredLayout}
                         onFieldChange={updateField}
                       />
                     ) : null}
-                  </div>
-                </section>
+                    </div>
+                  </section>
+                ) : null}
 
-                <section className='border-t border-slate-200 pt-4'>
-                  <FormSectionHeading title='Payment details' color='amber' />
-                  <PaymentFields form={form} onFieldChange={updateField} />
-                </section>
+                <fieldset
+                  disabled={isWaitingForRequiredSelection}
+                  className='space-y-5 disabled:opacity-60'
+                >
+                  {form.subType && fieldConfig.allowPaymentDetails ? (
+                    <section className='border-t border-slate-200 pt-4'>
+                      <FormSectionHeading title='Payment details' color='amber' />
+                      <PaymentFields form={form} onFieldChange={updateField} />
+                    </section>
+                  ) : null}
 
-                <section className='border-t border-slate-200 pt-4'>
-                  <FormSectionHeading title='Amounts' color='emerald' />
-                  {renderTypeSpecificFields()}
-                </section>
-
-                <section className='border-t border-slate-200 pt-4'>
-                  <FormSectionHeading title='Notes' color='rose' />
-                  <div className='grid gap-4 sm:grid-cols-2'>
-                    <label className='grid gap-1.5 text-sm font-medium text-slate-700'>
-                      <span>Description</span>
-                      <input
-                        type='text'
-                        value={form.description ?? ''}
-                        onChange={event => updateField('description', event.target.value || null)}
-                        className='h-9 min-w-0 rounded-md border border-slate-300 bg-white px-2.5 font-normal text-slate-900 outline-none focus:border-teal-700 focus:ring-2 focus:ring-teal-700/15'
+                  {form.subType && fieldConfig.amountFields.length > 0 ? (
+                    <section className='border-t border-slate-200 pt-4'>
+                      <FormSectionHeading title='Amounts' color='emerald' />
+                      <TransactionAmountFields
+                        form={form}
+                        config={fieldConfig}
+                        onFieldChange={updateField}
                       />
-                    </label>
-                    <label className='grid gap-1.5 text-sm font-medium text-slate-700'>
-                      <span>Remarks</span>
-                      <input
-                        type='text'
-                        value={form.remarks ?? ''}
-                        onChange={event => updateField('remarks', event.target.value || null)}
-                        className='h-9 min-w-0 rounded-md border border-slate-300 bg-white px-2.5 font-normal text-slate-900 outline-none focus:border-teal-700 focus:ring-2 focus:ring-teal-700/15'
-                      />
-                    </label>
-                  </div>
-                </section>
+                    </section>
+                  ) : null}
+
+                  {form.subType ? (
+                    <section className='border-t border-slate-200 pt-4'>
+                      <FormSectionHeading title='Notes' color='rose' />
+                      <div className='grid gap-4 sm:grid-cols-2'>
+                      <label className='grid gap-1.5 text-sm font-medium text-slate-700'>
+                        <span>Remarks</span>
+                        <input
+                          type='text'
+                          value={form.remarks ?? ''}
+                          onChange={event => updateField('remarks', event.target.value || null)}
+                          className='h-9 min-w-0 rounded-md border border-slate-300 bg-white px-2.5 font-normal text-slate-900 outline-none focus:border-teal-700 focus:ring-2 focus:ring-teal-700/15'
+                        />
+                      </label>
+                      </div>
+                    </section>
+                  ) : null}
+                </fieldset>
               </div>
 
               <aside className='space-y-3 rounded-md border border-slate-200 bg-slate-50 p-3 lg:sticky lg:top-5'>
@@ -467,7 +486,7 @@ export default function TransactionFormPage({ mode }: TransactionFormPageProps) 
               >
                 Cancel
               </Button>
-              <Button type='submit' disabled={isSaving}>
+              <Button type='submit' disabled={isSaving || isWaitingForRequiredSelection}>
                 {isSaving ? 'Saving...' : isEditing ? 'Save changes' : 'Create transaction'}
               </Button>
             </footer>

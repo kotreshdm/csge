@@ -241,15 +241,13 @@ export interface Transaction {
   transactionDate: string;
   cashbookNo: number | null;
   cashbookPage: number | null;
-  type: 'CREDIT' | 'DEBIT';
+  type: 'CREDIT' | 'DEBIT' | 'LAYOUT_EXPENSE';
   subType: string;
   memberId: string | null;
   partyId: string | null;
   layoutId: string | null;
   shareAmount: string;
   shareFeeAmount: string;
-  applicationFeeAmount: string;
-  admissionFeeAmount: string;
   membershipFeeAmount: string;
   siteDepositAmount: string;
   welfareFundAmount: string;
@@ -283,8 +281,6 @@ export interface TransactionPayload {
   layoutId: string | null;
   shareAmount: string;
   shareFeeAmount: string;
-  applicationFeeAmount: string;
-  admissionFeeAmount: string;
   membershipFeeAmount: string;
   siteDepositAmount: string;
   welfareFundAmount: string;
@@ -298,7 +294,7 @@ export interface TransactionPayload {
   chequeDate: string | null;
   bankReferenceNo: string | null;
   remarks: string | null;
-  createdBy?: string;
+  createdBy?: string | null;
   updatedBy?: string | null;
 }
 
@@ -310,11 +306,31 @@ export interface DashboardSummaryMonthlyEntry {
   profitLoss: string;
 }
 
+export interface DashboardPositions {
+  share: {
+    totalAmount: string;
+    memberAmount: string;
+    associateAmount: string;
+    totalMemberCount: number;
+    regularMemberCount: number;
+    associateMemberCount: number;
+  };
+  siteDeposit: {
+    totalAmount: string;
+    layouts: Array<{
+      id: string;
+      name: string;
+      layoutCode: string;
+      amount: string;
+    }>;
+  };
+}
+
 export interface DashboardRecentTransaction {
   id: string;
   transactionDate: string;
   totalAmount: string;
-  type: 'CREDIT' | 'DEBIT';
+  type: 'CREDIT' | 'DEBIT' | 'LAYOUT_EXPENSE';
   subType: string;
   paymentMode: 'CASH' | 'CHEQUE' | 'BANK_TRANSFER' | 'UPI' | 'OTHER' | null;
   member?: { memberCode: string; name: string } | null;
@@ -429,7 +445,7 @@ export interface MemberTransactionDetailsItem {
   id: string;
   transactionNo: string;
   transactionDate: string;
-  type: 'CREDIT' | 'DEBIT';
+  type: 'CREDIT' | 'DEBIT' | 'LAYOUT_EXPENSE';
   subType: string;
   paymentMode: 'CASH' | 'CHEQUE' | 'BANK_TRANSFER' | 'UPI' | 'OTHER' | null;
   receiptNo: string | null;
@@ -441,8 +457,6 @@ export interface MemberTransactionDetailsItem {
   totalAmount: string;
   shareAmount: string;
   shareFeeAmount: string;
-  applicationFeeAmount: string;
-  admissionFeeAmount: string;
   membershipFeeAmount: string;
   siteDepositAmount: string;
   welfareFundAmount: string;

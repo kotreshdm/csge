@@ -1,6 +1,6 @@
 import type { TransactionPayload } from '../../api/types';
-import { TRANSACTION_AMOUNT_FIELDS, TRANSACTION_TYPES } from './transactionConstants';
-import { calculateTotalAmount } from './transactionRules';
+import { TRANSACTION_AMOUNT_FIELDS } from './transactionConstants';
+import { calculateTotalAmount, getTransactionFormConfig } from './transactionRules';
 
 export type ValidationErrors = Record<string, string>;
 
@@ -24,16 +24,28 @@ export function validateTransaction(form: TransactionPayload): ValidationErrors 
     errors.cashbookPage = 'Enter both cashbook number and page to save a reference.';
   }
 
-  if (!TRANSACTION_TYPES.includes(form.type)) {
+  if (form.type !== 'CREDIT' && form.type !== 'DEBIT') {
     errors.type = 'Transaction type is required.';
   }
 
-  if (!form.subType.trim()) {
-    errors.subType = 'Sub-type is required.';
+  const config = getTransactionFormConfig(form.type, form.subType);
+  if (!form.subType.trim() || !config.isValid) {
+    errors.subType = 'Select a valid sub-type for this transaction type.';
+  }
+  if (config.requiredMember && !form.memberId) {
+    errors.memberId = 'Select a member for this transaction subtype.';
+  }
+  if (config.requiredParty && !form.partyId) {
+    errors.partyId = 'Select a party for this transaction subtype.';
+  }
+  if (config.requiredLayout && !form.layoutId) {
+    errors.layoutId = 'Select a layout for this transaction.';
   }
 
   let invalidAmount = false;
-  for (const [field, label] of TRANSACTION_AMOUNT_FIELDS) {
+  const amountLabels = new Map(TRANSACTION_AMOUNT_FIELDS);
+  for (const field of config.amountFields) {
+    const label = amountLabels.get(field) ?? field;
     const value = form[field]?.trim() ?? '';
     if (value && !/^\d+(?:\.\d{1,2})?$/.test(value)) {
       errors[field] = `${label} must be a non-negative amount with at most 2 decimal places.`;
@@ -45,6 +57,16 @@ export function validateTransaction(form: TransactionPayload): ValidationErrors 
     errors.totalAmount = 'Total amount must be a non-negative amount.';
   } else if (!invalidAmount && form.totalAmount !== calculateTotalAmount(form)) {
     errors.totalAmount = 'Total amount must match the sum of the amount fields.';
+  } else if (Number(form.totalAmount) <= 0) {
+    errors.totalAmount = 'Total amount must be greater than zero.';
+  }
+
+  if (form.paymentMode === 'CHEQUE') {
+    if (!form.chequeNo?.trim()) errors.chequeNo = 'Cheque number is required for cheque payment.';
+    if (!form.chequeDate) errors.chequeDate = 'Cheque date is required for cheque payment.';
+  }
+  if (form.paymentMode === 'BANK_TRANSFER' && !form.bankReferenceNo?.trim()) {
+    errors.bankReferenceNo = 'Bank reference is required for bank transfer.';
   }
 
   return errors;

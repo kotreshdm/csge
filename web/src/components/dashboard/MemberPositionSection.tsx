@@ -92,10 +92,6 @@ export function MemberPositionSection({
               ) : (
                 <p className='py-3 text-sm text-slate-500'>No share charges recorded this year.</p>
               )}
-              <p className='pt-3 text-xs text-slate-500'>
-                Application fee is not stored as a separate amount in the current transaction
-                schema.
-              </p>
             </CardContent>
           </Card>
         </div>

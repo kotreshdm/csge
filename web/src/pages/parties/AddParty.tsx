@@ -3,7 +3,7 @@ import { ArrowLeft, UsersRound } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { createParty, getPartyTypes } from '../../api/parties';
+import { createParty, getParties } from '../../api/parties';
 import type { PartyPayload } from '../../api/types';
 import { Button } from '@/components/ui/button';
 import PartyForm, { partyFormDefaultValues } from '../../components/parties/PartyForm';
@@ -12,11 +12,20 @@ import { ROUTES } from '../../const/routs';
 export default function AddParty() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { data: partyTypeOptions = [] } = useQuery({
-    queryKey: ['partyTypes'],
-    queryFn: getPartyTypes,
+  const { data: partiesData } = useQuery({
+    queryKey: ['parties'],
+    queryFn: getParties,
     staleTime: 30_000,
   });
+  const parties = partiesData?.data.items ?? [];
+  const partyTypeOptions = [...new Set(parties.map(party => party.partyType).filter(Boolean))];
+  const latestPartyStartDate = parties.reduce(
+    (latest, party) => {
+      const startDate = party.startDate.slice(0, 10);
+      return startDate > latest ? startDate : latest;
+    },
+    '2012-05-28',
+  );
   const [submitMessage, setSubmitMessage] = useState<{
     type: 'success' | 'error';
     message: string;
@@ -66,7 +75,12 @@ export default function AddParty() {
         </div>
 
         <PartyForm
-          defaultValues={partyFormDefaultValues}
+          defaultValues={{
+            ...partyFormDefaultValues,
+            partyType: 'EXPENSE',
+            startDate: latestPartyStartDate,
+            endDate: '2099-01-01',
+          }}
           partyTypeOptions={partyTypeOptions}
           onSubmit={handleCreateParty}
           submitLabel='Create Party'

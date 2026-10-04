@@ -2,6 +2,7 @@ import type { TransactionPayload } from '../../api/types';
 
 interface MemberSelectorProps {
   form: TransactionPayload;
+  required?: boolean;
   members: Array<{
     memberId: string;
     memberCode: string;
@@ -20,6 +21,7 @@ interface MemberSelectorProps {
 
 export function MemberSelector({
   form,
+  required = false,
   members,
   memberLookup,
   isMemberOptionsOpen,
@@ -45,9 +47,10 @@ export function MemberSelector({
     <label className='relative grid gap-1.5 text-sm font-medium text-slate-700'>
       <span>
         Member
-        <span className='ml-1 text-rose-600'>*</span>
+        {required ? <span className='ml-1 text-rose-600'>*</span> : null}
       </span>
       <input
+        required={required}
         role='combobox'
         aria-autocomplete='list'
         aria-expanded={isMemberOptionsOpen}
@@ -79,19 +82,21 @@ export function MemberSelector({
           role='listbox'
           className='absolute left-0 right-0 top-full z-20 max-h-56 overflow-y-auto rounded-md border border-slate-200 bg-white py-1 shadow-lg'
         >
-          <button
-            type='button'
-            role='option'
-            aria-selected={!form.memberId}
-            onClick={() => {
-              onSelectMember('');
-              onLookupChange('');
-              onToggleMembers(false);
-            }}
-            className='block w-full px-3 py-2 text-left text-sm font-normal text-slate-600 hover:bg-slate-50'
-          >
-            No member
-          </button>
+          {!required ? (
+            <button
+              type='button'
+              role='option'
+              aria-selected={!form.memberId}
+              onClick={() => {
+                onSelectMember('');
+                onLookupChange('');
+                onToggleMembers(false);
+              }}
+              className='block w-full px-3 py-2 text-left text-sm font-normal text-slate-600 hover:bg-slate-50'
+            >
+              No member
+            </button>
+          ) : null}
           {matchingMembers.map(member => (
             <button
               key={member.memberId}

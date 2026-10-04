@@ -1,9 +1,21 @@
 import { api } from './client';
 import type {
   DashboardSummary,
+  DashboardPositions,
   DashboardTransactionsPage,
   MemberTransactionReport,
 } from './types';
+
+export function getDashboardPositions() {
+  return api<{
+    success: boolean;
+    message: string;
+    data: DashboardPositions;
+  }>({
+    method: 'GET',
+    url: '/dashboard/positions',
+  });
+}
 
 type DashboardFinancialYearsResponse = {
   success: boolean;
