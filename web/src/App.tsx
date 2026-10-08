@@ -21,6 +21,7 @@ import EditParty from './pages/parties/EditParty';
 import Layouts from './pages/layouts/Layouts';
 import AddLayout from './pages/layouts/AddLayout';
 import EditLayout from './pages/layouts/EditLayout';
+import Sites from './pages/sites/Sites';
 
 import ChequeRanges from './pages/chequeRanges/ChequeRanges';
 import Transactions from './pages/transactions/TransactionsList';
@@ -177,6 +178,15 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <EditLayout />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path={ROUTES.ADMIN.SITES}
+            element={
+              <ProtectedRoute>
+                <Sites />
               </ProtectedRoute>
             }
           />

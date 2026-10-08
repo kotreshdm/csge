@@ -82,6 +82,37 @@ export interface LayoutPayload {
   status: string;
 }
 
+export interface Site {
+  id: string;
+  siteNo: string;
+  layoutId: string;
+  eastWest: string;
+  northSouth: string;
+  totalSqFeet: string;
+  totalPrice: string;
+  registeredAmount: string;
+  allottedMemberId: string | null;
+  allotmentDate: string | null;
+  status: 'AVAILABLE' | 'ALLOCATED';
+  createdAt: string;
+  updatedAt: string;
+  layout: Pick<Layout, 'id' | 'layoutCode' | 'name'>;
+  allottedMember: { memberId: string; memberCode: string; name: string } | null;
+}
+
+export interface SitePayload {
+  siteNo: string;
+  layoutId: string;
+  eastWest: string;
+  northSouth: string;
+  totalSqFeet: string;
+  totalPrice: string;
+  registeredAmount: string;
+  allottedMemberId: string | null;
+  allotmentDate: string | null;
+  status: Site['status'];
+}
+
 export interface LayoutPricePayload {
   pricePerSqFt: string;
   validFrom: string;

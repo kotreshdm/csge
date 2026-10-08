@@ -12,6 +12,7 @@ import transactionRoutes from "./transaction.routes.js";
 import directorRoutes from "./director.routes.js";
 import gbmLetterReturnRoutes from "./gbmLetterReturn.routes.js";
 import dashboardRoutes from "./dashboard.routes.js";
+import siteRoutes from "./site.routes.js";
 
 export default async function routes(app: FastifyInstance) {
   await app.register(healthRoutes);
@@ -19,6 +20,7 @@ export default async function routes(app: FastifyInstance) {
   await app.register(memberRoutes, { prefix: "/members" });
   await app.register(partyRoutes, { prefix: "/parties" });
   await app.register(layoutRoutes, { prefix: "/layouts" });
+  await app.register(siteRoutes, { prefix: "/sites" });
   await app.register(chequeRangeRoutes, { prefix: "/cheque-ranges" });
   await app.register(cancelledChequeRoutes, { prefix: "/cancelled-cheques" });
   await app.register(cancelledReceiptRoutes, { prefix: "/cancelled-receipts" });

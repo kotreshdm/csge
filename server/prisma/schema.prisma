@@ -89,6 +89,7 @@ addressHistory MemberAddressHistory[]
   transactions        Transaction[] @relation("TransactionMember")
   createdTransactions Transaction[] @relation("TransactionCreatedBy")
   updatedTransactions Transaction[] @relation("TransactionUpdatedBy")
+  allottedSites       Site[]
 
   @@index([name])
   @@index([nameKannada])
@@ -191,6 +192,7 @@ model Layout {
 
   // Transaction relations
   transactions Transaction[] @relation("TransactionLayout")
+  sites        Site[]
 
   @@index([status])
 
@@ -416,17 +418,21 @@ model MemberAddressHistory {
 
 model Site {
   id                BigInt    @id @default(autoincrement())
-  siteNo            String
   layoutId          BigInt
+  siteNo            String
+  eastWest          Decimal   @db.Decimal(12, 2)
+  northSouth        Decimal   @db.Decimal(12, 2)
+  totalSqFeet       Decimal   @db.Decimal(12, 2)
+  totalPrice        Decimal   @default(0) @db.Decimal(15, 2)
+  registeredAmount  Decimal   @default(0) @db.Decimal(15, 2)
   allottedMemberId  BigInt?
-
+  allotmentDate     DateTime? @db.Date
   status            String    @default("AVAILABLE")
-
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
-  layout            Layout    @relation(fields: [layoutId], references: [id])
-  allottedMember    Member?   @relation(fields: [allottedMemberId], references: [id])
+  layout         Layout  @relation(fields: [layoutId], references: [id])
+  allottedMember Member? @relation(fields: [allottedMemberId], references: [memberId])
 
   @@unique([layoutId, siteNo])
   @@index([layoutId])

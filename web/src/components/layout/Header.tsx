@@ -54,6 +54,7 @@ const menuGroups = [
     items: [
       { label: 'Parties', to: ROUTES.ADMIN.PARTIES },
       { label: 'Layouts', to: ROUTES.ADMIN.LAYOUTS },
+      { label: 'Sites', to: ROUTES.ADMIN.SITES },
     ],
   },
 ];
