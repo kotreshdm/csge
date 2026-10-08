@@ -19,7 +19,7 @@ export async function getDashboardPositions() {
         _sum: { siteDepositAmount: true },
       }),
       prisma.member.groupBy({
-        by: ["memberType"],
+        by: ["memberType", "status"],
         _count: { _all: true },
       }),
     ],
@@ -99,11 +99,25 @@ export async function getDashboardPositions() {
     })
     .sort((left, right) => left.name.localeCompare(right.name));
 
-  const countByType = new Map(
-    memberCounts.map((group) => [group.memberType, group._count._all]),
+  const countByTypeAndStatus = new Map(
+    memberCounts.map((group) => [
+      `${group.memberType}:${group.status}`,
+      group._count._all,
+    ]),
   );
-  const regularMemberCount = countByType.get("MEMBER") ?? 0;
-  const associateMemberCount = countByType.get("ASSOCIATE") ?? 0;
+
+  const regularActiveMemberCount =
+    countByTypeAndStatus.get("MEMBER:ACTIVE") ?? 0;
+  const regularInactiveMemberCount =
+    countByTypeAndStatus.get("MEMBER:INACTIVE") ?? 0;
+  const associateActiveMemberCount =
+    countByTypeAndStatus.get("ASSOCIATE:ACTIVE") ?? 0;
+  const associateInactiveMemberCount =
+    countByTypeAndStatus.get("ASSOCIATE:INACTIVE") ?? 0;
+  const regularMemberCount =
+    regularActiveMemberCount + regularInactiveMemberCount;
+  const associateMemberCount =
+    associateActiveMemberCount + associateInactiveMemberCount;
 
   return {
     share: {
@@ -113,6 +127,10 @@ export async function getDashboardPositions() {
       totalMemberCount: regularMemberCount + associateMemberCount,
       regularMemberCount,
       associateMemberCount,
+      regularActiveMemberCount,
+      regularInactiveMemberCount,
+      associateActiveMemberCount,
+      associateInactiveMemberCount,
     },
     siteDeposit: {
       totalAmount: totalSiteDeposit.toString(),

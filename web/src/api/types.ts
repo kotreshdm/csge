@@ -345,6 +345,10 @@ export interface DashboardPositions {
     totalMemberCount: number;
     regularMemberCount: number;
     associateMemberCount: number;
+    regularActiveMemberCount: number;
+    regularInactiveMemberCount: number;
+    associateActiveMemberCount: number;
+    associateInactiveMemberCount: number;
   };
   siteDeposit: {
     totalAmount: string;
