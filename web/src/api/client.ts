@@ -5,6 +5,7 @@ import {
   setServerOnline,
   setServerOffline,
 } from "../store/slices/serverStatusSlice";
+import { logout } from "../store/slices/authSlice";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -36,6 +37,16 @@ apiClient.interceptors.response.use(
   },
 
   (error: AxiosError) => {
+    if (
+      error.response?.status === 401 &&
+      !error.config?.url?.includes("/auth/") &&
+      typeof window !== "undefined" &&
+      localStorage.getItem("accessToken")
+    ) {
+      store.dispatch(logout());
+      window.location.replace("/admin/login");
+    }
+
     // No response means the server could not be reached.
     if (!error.response) {
       store.dispatch(

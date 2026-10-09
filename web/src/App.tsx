@@ -6,6 +6,7 @@ import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
 import { ROUTES } from './const/routs';
 import AdminDashboard from './pages/AdminDashboard';
+import LayoutDashboardPage from './pages/LayoutDashboardPage';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Members from './pages/members/Members';
@@ -52,6 +53,15 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path={ROUTES.ADMIN.LAYOUT_DASHBOARD}
+            element={
+              <ProtectedRoute>
+                <LayoutDashboardPage />
               </ProtectedRoute>
             }
           />

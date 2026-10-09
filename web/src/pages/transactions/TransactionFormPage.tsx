@@ -227,27 +227,33 @@ export default function TransactionFormPage({ mode }: TransactionFormPageProps) 
         receiptNo: previous.receiptNo || lastShareInTransaction.receiptNo || '',
         paymentMode: previous.paymentMode ?? lastShareInTransaction.paymentMode ?? null,
         shareAmount:
-          previous.shareAmount === '0' ? lastShareInTransaction.shareAmount : previous.shareAmount,
+          previous.shareAmount === '' || previous.shareAmount === '0'
+            ? lastShareInTransaction.shareAmount
+            : previous.shareAmount,
         shareFeeAmount:
-          previous.shareFeeAmount === '0'
+          previous.shareFeeAmount === '' || previous.shareFeeAmount === '0'
             ? lastShareInTransaction.shareFeeAmount
             : previous.shareFeeAmount,
         membershipFeeAmount:
-          previous.membershipFeeAmount === '0'
+          previous.membershipFeeAmount === '' || previous.membershipFeeAmount === '0'
             ? lastShareInTransaction.membershipFeeAmount
             : previous.membershipFeeAmount,
         welfareFundAmount:
-          previous.welfareFundAmount === '0'
+          previous.welfareFundAmount === '' || previous.welfareFundAmount === '0'
             ? lastShareInTransaction.welfareFundAmount
             : previous.welfareFundAmount,
         booksFormsAmount:
-          previous.booksFormsAmount === '0'
+          previous.booksFormsAmount === '' || previous.booksFormsAmount === '0'
             ? lastShareInTransaction.booksFormsAmount
             : previous.booksFormsAmount,
         miscellaneousAmount:
-          previous.miscellaneousAmount === '0'
+          previous.miscellaneousAmount === '' || previous.miscellaneousAmount === '0'
             ? lastShareInTransaction.miscellaneousAmount
             : previous.miscellaneousAmount,
+        otherAmount:
+          previous.otherAmount === '' || previous.otherAmount === '0'
+            ? lastShareInTransaction.otherAmount
+            : previous.otherAmount,
       };
 
       return normalizeTransaction({ ...previous, ...defaults });
@@ -394,39 +400,39 @@ export default function TransactionFormPage({ mode }: TransactionFormPageProps) 
                   <section className='border-t border-slate-200 pt-4'>
                     <FormSectionHeading title='Transaction parties' color='blue' />
                     <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-3'>
-                    {fieldConfig.showMember ? (
-                      <MemberSelector
-                        form={form}
-                        required={fieldConfig.requiredMember}
-                        members={members}
-                        memberLookup={memberLookup}
-                        isMemberOptionsOpen={isMemberOptionsOpen}
-                        membersLoading={membersLoading}
-                        onLookupChange={setMemberLookup}
-                        onToggleMembers={setIsMemberOptionsOpen}
-                        onSelectMember={selectMember}
-                      />
-                    ) : null}
+                      {fieldConfig.showMember ? (
+                        <MemberSelector
+                          form={form}
+                          required={fieldConfig.requiredMember}
+                          members={members}
+                          memberLookup={memberLookup}
+                          isMemberOptionsOpen={isMemberOptionsOpen}
+                          membersLoading={membersLoading}
+                          onLookupChange={setMemberLookup}
+                          onToggleMembers={setIsMemberOptionsOpen}
+                          onSelectMember={selectMember}
+                        />
+                      ) : null}
 
-                    {fieldConfig.showParty ? (
-                      <PartySelector
-                        form={form}
-                        parties={filteredParties}
-                        required={fieldConfig.requiredParty}
-                        onFieldChange={updateField}
-                      />
-                    ) : null}
+                      {fieldConfig.showParty ? (
+                        <PartySelector
+                          form={form}
+                          parties={filteredParties}
+                          required={fieldConfig.requiredParty}
+                          onFieldChange={updateField}
+                        />
+                      ) : null}
 
-                    {fieldConfig.showLayout ? (
-                      <LayoutSelector
-                        form={form}
-                        layouts={layouts}
-                        field='layoutId'
-                        label='Layout'
-                        required={fieldConfig.requiredLayout}
-                        onFieldChange={updateField}
-                      />
-                    ) : null}
+                      {fieldConfig.showLayout ? (
+                        <LayoutSelector
+                          form={form}
+                          layouts={layouts}
+                          field='layoutId'
+                          label='Layout'
+                          required={fieldConfig.requiredLayout}
+                          onFieldChange={updateField}
+                        />
+                      ) : null}
                     </div>
                   </section>
                 ) : null}
@@ -457,15 +463,15 @@ export default function TransactionFormPage({ mode }: TransactionFormPageProps) 
                     <section className='border-t border-slate-200 pt-4'>
                       <FormSectionHeading title='Notes' color='rose' />
                       <div className='grid gap-4 sm:grid-cols-2'>
-                      <label className='grid gap-1.5 text-sm font-medium text-slate-700'>
-                        <span>Remarks</span>
-                        <input
-                          type='text'
-                          value={form.remarks ?? ''}
-                          onChange={event => updateField('remarks', event.target.value || null)}
-                          className='h-9 min-w-0 rounded-md border border-slate-300 bg-white px-2.5 font-normal text-slate-900 outline-none focus:border-teal-700 focus:ring-2 focus:ring-teal-700/15'
-                        />
-                      </label>
+                        <label className='grid gap-1.5 text-sm font-medium text-slate-700'>
+                          <span>Remarks</span>
+                          <input
+                            type='text'
+                            value={form.remarks ?? ''}
+                            onChange={event => updateField('remarks', event.target.value || null)}
+                            className='h-9 min-w-0 rounded-md border border-slate-300 bg-white px-2.5 font-normal text-slate-900 outline-none focus:border-teal-700 focus:ring-2 focus:ring-teal-700/15'
+                          />
+                        </label>
                       </div>
                     </section>
                   ) : null}

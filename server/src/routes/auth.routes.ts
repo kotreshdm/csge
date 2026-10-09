@@ -120,7 +120,7 @@ export default async function authRoutes(app: FastifyInstance) {
         memberType: member.memberType,
       },
       {
-        expiresIn: "1d",
+        expiresIn: process.env.JWT_EXPIRES_IN ?? "30d",
       },
     );
 

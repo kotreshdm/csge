@@ -14,7 +14,7 @@ export async function getDashboardPositions() {
         _sum: { shareAmount: true },
       }),
       prisma.transaction.groupBy({
-        by: ["layoutId", "type"],
+        by: ["layoutId", "memberId", "type"],
         where: { subType: "SITE", type: { in: ["CREDIT", "DEBIT"] } },
         _sum: { siteDepositAmount: true },
       }),
@@ -27,8 +27,12 @@ export async function getDashboardPositions() {
 
   const shareBalances = new Map<string, Prisma.Decimal>();
   let totalShare = zero();
+  let totalShareIn = zero();
+  let totalShareOut = zero();
   for (const transaction of shareTransactions) {
     const amount = amountOrZero(transaction._sum.shareAmount);
+    if (transaction.type === "CREDIT") totalShareIn = totalShareIn.plus(amount);
+    else totalShareOut = totalShareOut.plus(amount);
     const signedAmount =
       transaction.type === "CREDIT" ? amount : amount.negated();
     totalShare = totalShare.plus(signedAmount);
@@ -55,15 +59,37 @@ export async function getDashboardPositions() {
   );
   let memberShare = zero();
   let associateShare = zero();
+  let regularShareIn = zero();
+  let regularShareOut = zero();
+  let associateShareIn = zero();
+  let associateShareOut = zero();
   for (const [memberId, balance] of shareBalances) {
     const memberType = memberTypeById.get(memberId);
     if (memberType === "MEMBER") memberShare = memberShare.plus(balance);
     if (memberType === "ASSOCIATE")
       associateShare = associateShare.plus(balance);
   }
+  for (const transaction of shareTransactions) {
+    if (transaction.memberId === null) continue;
+
+    const memberType = memberTypeById.get(transaction.memberId.toString());
+    const amount = amountOrZero(transaction._sum.shareAmount);
+    if (memberType === "MEMBER" && transaction.type === "CREDIT") {
+      regularShareIn = regularShareIn.plus(amount);
+    } else if (memberType === "MEMBER") {
+      regularShareOut = regularShareOut.plus(amount);
+    } else if (memberType === "ASSOCIATE" && transaction.type === "CREDIT") {
+      associateShareIn = associateShareIn.plus(amount);
+    } else if (memberType === "ASSOCIATE") {
+      associateShareOut = associateShareOut.plus(amount);
+    }
+  }
 
   let totalSiteDeposit = zero();
   const depositsByLayout = new Map<string, Prisma.Decimal>();
+  const layoutIncoming = new Map<string, Prisma.Decimal>();
+  const layoutOutgoing = new Map<string, Prisma.Decimal>();
+  const layoutMembers = new Map<string, Map<string, Prisma.Decimal>>();
   for (const transaction of siteTransactions) {
     const amount = amountOrZero(transaction._sum.siteDepositAmount);
     const signedAmount =
@@ -75,6 +101,26 @@ export async function getDashboardPositions() {
         layoutId,
         (depositsByLayout.get(layoutId) ?? zero()).plus(signedAmount),
       );
+      if (transaction.type === "CREDIT") {
+        layoutIncoming.set(
+          layoutId,
+          (layoutIncoming.get(layoutId) ?? zero()).plus(amount),
+        );
+      } else {
+        layoutOutgoing.set(
+          layoutId,
+          (layoutOutgoing.get(layoutId) ?? zero()).plus(amount),
+        );
+      }
+      if (transaction.memberId !== null) {
+        const memberId = transaction.memberId.toString();
+        const members = layoutMembers.get(layoutId) ?? new Map<string, Prisma.Decimal>();
+        members.set(
+          memberId,
+          (members.get(memberId) ?? zero()).plus(signedAmount),
+        );
+        layoutMembers.set(layoutId, members);
+      }
     }
   }
 
@@ -95,6 +141,12 @@ export async function getDashboardPositions() {
         name: layout?.name ?? "Unknown layout",
         layoutCode: layout?.layoutCode ?? "",
         amount: amount.toString(),
+        totalInAmount: (layoutIncoming.get(id) ?? zero()).toString(),
+        totalOutAmount: (layoutOutgoing.get(id) ?? zero()).toString(),
+        uniqueMemberCount:
+          [...(layoutMembers.get(id)?.values() ?? [])].filter((balance) =>
+            balance.greaterThan(0),
+          ).length,
       };
     })
     .sort((left, right) => left.name.localeCompare(right.name));
@@ -122,8 +174,14 @@ export async function getDashboardPositions() {
   return {
     share: {
       totalAmount: totalShare.toString(),
+      totalInAmount: totalShareIn.toString(),
+      totalOutAmount: totalShareOut.toString(),
       memberAmount: memberShare.toString(),
       associateAmount: associateShare.toString(),
+      regularShareInAmount: regularShareIn.toString(),
+      regularShareOutAmount: regularShareOut.toString(),
+      associateShareInAmount: associateShareIn.toString(),
+      associateShareOutAmount: associateShareOut.toString(),
       totalMemberCount: regularMemberCount + associateMemberCount,
       regularMemberCount,
       associateMemberCount,
@@ -134,6 +192,19 @@ export async function getDashboardPositions() {
     },
     siteDeposit: {
       totalAmount: totalSiteDeposit.toString(),
+      totalInAmount: [...layoutIncoming.values()]
+        .reduce((total, amount) => total.plus(amount), zero())
+        .toString(),
+      totalOutAmount: [...layoutOutgoing.values()]
+        .reduce((total, amount) => total.plus(amount), zero())
+        .toString(),
+      uniqueMemberCount: new Set(
+        [...layoutMembers.values()].flatMap((members) =>
+          [...members.entries()]
+            .filter(([, balance]) => balance.greaterThan(0))
+            .map(([memberId]) => memberId),
+        ),
+      ).size,
       layouts: layoutDeposits,
     },
   };

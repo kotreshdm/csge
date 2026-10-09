@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 
 import { ROUTES } from '../const/routs';
 import AdminDashboard from '../pages/AdminDashboard';
+import LayoutDashboardPage from '../pages/LayoutDashboardPage';
 import Login from '../pages/Login';
 import Register from '../pages/Register';
 import AddTransaction from '../pages/transactions/AddTransaction';
@@ -14,6 +15,10 @@ const protectedRoutes: { path: string; element: ReactNode }[] = [
   {
     path: ROUTES.ADMIN.ROOT,
     element: <AdminDashboard />,
+  },
+  {
+    path: ROUTES.ADMIN.LAYOUT_DASHBOARD,
+    element: <LayoutDashboardPage />,
   },
   {
     path: ROUTES.ADMIN.TRANSACTIONS,
@@ -65,6 +70,10 @@ export default function AppRoutes() {
         <Route key={path} path={path} element={<PublicRoute>{element}</PublicRoute>} />
       ))}
 
+      <Route
+        path='/admin/layout-dashboard'
+        element={<Navigate to={ROUTES.ADMIN.LAYOUT_DASHBOARD} replace />}
+      />
       <Route path={ROUTES.ROOT} element={<Navigate to={ROUTES.ADMIN.LOGIN} replace />} />
 
       <Route path='*' element={<Navigate to={ROUTES.ADMIN.LOGIN} replace />} />

@@ -340,8 +340,14 @@ export interface DashboardSummaryMonthlyEntry {
 export interface DashboardPositions {
   share: {
     totalAmount: string;
+    totalInAmount: string;
+    totalOutAmount: string;
     memberAmount: string;
     associateAmount: string;
+    regularShareInAmount: string;
+    regularShareOutAmount: string;
+    associateShareInAmount: string;
+    associateShareOutAmount: string;
     totalMemberCount: number;
     regularMemberCount: number;
     associateMemberCount: number;
@@ -352,13 +358,63 @@ export interface DashboardPositions {
   };
   siteDeposit: {
     totalAmount: string;
+    totalInAmount: string;
+    totalOutAmount: string;
+    uniqueMemberCount: number;
     layouts: Array<{
       id: string;
       name: string;
       layoutCode: string;
       amount: string;
+      totalInAmount: string;
+      totalOutAmount: string;
+      uniqueMemberCount: number;
     }>;
   };
+}
+
+export interface LayoutPaymentDashboard {
+  layouts: Array<Pick<Layout, 'id' | 'layoutCode' | 'name'>>;
+  selectedLayout: Pick<Layout, 'id' | 'layoutCode' | 'name'> | null;
+  totals: {
+    paid: string;
+    returned: string;
+    balance: string;
+    memberCount: number;
+  };
+  items: Array<{
+    memberId: string;
+    memberCode: string;
+    name: string;
+    memberType: 'MEMBER' | 'ASSOCIATE' | 'SUPERUSER';
+    status: string;
+    paid: string;
+    returned: string;
+    balance: string;
+  }>;
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+export interface LayoutMemberTransactionPage {
+  items: Array<{
+    id: string;
+    transactionNo: string;
+    transactionDate: string;
+    type: 'CREDIT' | 'DEBIT';
+    siteDepositAmount: string;
+    totalAmount: string;
+    receiptNo: string | null;
+    paymentMode: Transaction['paymentMode'];
+    chequeNo: string | null;
+    remarks: string | null;
+  }>;
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
 }
 
 export interface DashboardRecentTransaction {

@@ -2,6 +2,7 @@ export const ROUTES = {
   ROOT: '/',
   ADMIN: {
     ROOT: '/admin',
+    LAYOUT_DASHBOARD: '/admin/layoutdashboard',
     LOGIN: '/admin/login',
     REGISTER: '/admin/register',
 

@@ -11,84 +11,129 @@ function formatCurrency(value: string) {
   });
 }
 
-function SummaryMetric({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div className='min-w-0 border-l-2 border-emerald-700 pl-3'>
-      <p className='text-sm text-slate-600'>{label}</p>
-      <p className='mt-1 break-words text-xl font-semibold tabular-nums text-slate-950'>{value}</p>
-    </div>
-  );
-}
-
-function MemberCountCard({
-  title,
-  active,
-  inactive,
-  total,
-}: {
-  title: string;
-  active: number;
-  inactive: number;
-  total: number;
-}) {
-  return (
-    <div className='min-w-0 border-l-2 border-emerald-700 pl-3'>
-      <p className='text-sm font-medium text-slate-700'>{title}</p>
-      <div className='mt-2 flex whitespace-nowrap items-center gap-3 text-sm'>
-        <span className='font-semibold text-emerald-700'>
-          <strong className='text-emerald-800'>{active}</strong>
-        </span>
-        <span aria-hidden='true' className='text-slate-300'>
-          +
-        </span>
-        <span className='font-semibold text-rose-600'>
-          <strong className='text-rose-700'>{inactive}</strong>
-        </span>
-        <span aria-hidden='true' className='text-slate-300'>
-          =
-        </span>
-        <span className='font-bold text-slate-950'> {total}</span>
-      </div>
-    </div>
-  );
-}
-
 function ShareSummary({ share }: { share: DashboardPositions['share'] }) {
+  const totalActive = share.regularActiveMemberCount + share.associateActiveMemberCount;
+  const totalInactive = share.regularInactiveMemberCount + share.associateInactiveMemberCount;
+  const amountCell = 'whitespace-nowrap px-3 py-2.5 text-right tabular-nums';
+
   return (
-    <section aria-labelledby='share-summary-heading' className='border-slate-200 pt-3'>
-      <div className='mb-5 flex items-center gap-2'>
+    <section aria-labelledby='share-summary-heading' className='pt-3'>
+      <div className='mb-3 flex items-center gap-2'>
         <UsersRound aria-hidden='true' className='size-5 text-emerald-800' />
         <h2 id='share-summary-heading' className='text-lg font-semibold text-slate-900'>
           Share Summary
         </h2>
+        <span className='ml-auto text-sm font-semibold tabular-nums text-emerald-900'>
+          Balance {formatCurrency(share.totalAmount)}
+        </span>
       </div>
-      <div className='grid gap-5 sm:grid-cols-2 lg:grid-cols-3'>
-        <SummaryMetric label='Member Share Amount' value={formatCurrency(share.memberAmount)} />
-        <SummaryMetric
-          label='Associate Share Amount'
-          value={formatCurrency(share.associateAmount)}
-        />
-        <SummaryMetric label='Total Share Amount' value={formatCurrency(share.totalAmount)} />
-      </div>
-      <div className='mt-5 grid gap-4 sm:grid-cols-3'>
-        <MemberCountCard
-          title='Regular Members'
-          active={share.regularActiveMemberCount}
-          inactive={share.regularInactiveMemberCount}
-          total={share.regularMemberCount}
-        />
-        <MemberCountCard
-          title='Associate Members'
-          active={share.associateActiveMemberCount}
-          inactive={share.associateInactiveMemberCount}
-          total={share.associateMemberCount}
-        />
-        <MemberCountCard
-          title='Total Members'
-          active={share.regularActiveMemberCount + share.associateActiveMemberCount}
-          inactive={share.regularInactiveMemberCount + share.associateInactiveMemberCount}
-          total={share.totalMemberCount}
-        />
+
+      <div className='overflow-x-auto rounded-lg border border-slate-200 bg-white'>
+        <table className='w-full min-w-[760px] text-sm'>
+          <caption className='sr-only'>Member counts and share balance, inflow, and outflow by type</caption>
+          <thead className='bg-slate-100 text-left text-xs font-semibold text-slate-600'>
+              <tr>
+                <th scope='col' className='px-4 py-3'>
+                  Member Type
+                </th>
+                <th scope='col' className='px-4 py-3 text-right'>
+                  <span className='inline-flex items-center gap-1.5'>
+                    <span aria-hidden='true' className='size-2 rounded-full bg-emerald-600' />
+                    Active
+                  </span>
+                </th>
+                <th scope='col' className='px-4 py-3 text-right'>
+                  <span className='inline-flex items-center gap-1.5'>
+                    <span aria-hidden='true' className='size-2 rounded-full bg-rose-600' />
+                    Inactive
+                  </span>
+                </th>
+                <th scope='col' className='px-4 py-3 text-right'>
+                  Total
+                </th>
+                <th scope='col' className='px-3 py-3 text-right'>
+                  Share Balance
+                </th>
+                <th scope='col' className='px-3 py-3 text-right text-emerald-800'>
+                  Share In
+                </th>
+                <th scope='col' className='px-3 py-3 text-right text-rose-800'>
+                  Share Out
+                </th>
+              </tr>
+            </thead>
+            <tbody className='divide-y divide-slate-200 text-slate-700'>
+              <tr>
+                <th scope='row' className='px-4 py-3 text-left font-medium text-slate-800'>
+                  Regular Members
+                </th>
+                <td className='px-4 py-2.5 text-right font-semibold tabular-nums text-emerald-800'>
+                  {share.regularActiveMemberCount}
+                </td>
+                <td className='px-4 py-2.5 text-right font-semibold tabular-nums text-rose-800'>
+                  {share.regularInactiveMemberCount}
+                </td>
+                <td className='px-4 py-2.5 text-right font-bold tabular-nums text-slate-950'>
+                  {share.regularMemberCount}
+                </td>
+                <td className={`${amountCell} font-semibold text-slate-950`}>
+                  {formatCurrency(share.memberAmount)}
+                </td>
+                <td className={`${amountCell} font-semibold text-emerald-800`}>
+                  {formatCurrency(share.regularShareInAmount)}
+                </td>
+                <td className={`${amountCell} font-semibold text-rose-800`}>
+                  {formatCurrency(share.regularShareOutAmount)}
+                </td>
+              </tr>
+              <tr>
+                <th scope='row' className='px-4 py-3 text-left font-medium text-slate-800'>
+                  Associate Members
+                </th>
+                <td className='px-4 py-2.5 text-right font-semibold tabular-nums text-emerald-800'>
+                  {share.associateActiveMemberCount}
+                </td>
+                <td className='px-4 py-2.5 text-right font-semibold tabular-nums text-rose-800'>
+                  {share.associateInactiveMemberCount}
+                </td>
+                <td className='px-4 py-2.5 text-right font-bold tabular-nums text-slate-950'>
+                  {share.associateMemberCount}
+                </td>
+                <td className={`${amountCell} font-semibold text-slate-950`}>
+                  {formatCurrency(share.associateAmount)}
+                </td>
+                <td className={`${amountCell} font-semibold text-emerald-800`}>
+                  {formatCurrency(share.associateShareInAmount)}
+                </td>
+                <td className={`${amountCell} font-semibold text-rose-800`}>
+                  {formatCurrency(share.associateShareOutAmount)}
+                </td>
+              </tr>
+              <tr className='bg-emerald-50/70'>
+                <th scope='row' className='px-4 py-2.5 text-left font-semibold text-slate-950'>
+                  Total Members
+                </th>
+                <td className='px-4 py-2.5 text-right font-bold tabular-nums text-emerald-900'>
+                  {totalActive}
+                </td>
+                <td className='px-4 py-2.5 text-right font-bold tabular-nums text-rose-900'>
+                  {totalInactive}
+                </td>
+                <td className='px-4 py-2.5 text-right font-bold tabular-nums text-slate-950'>
+                  {share.totalMemberCount}
+                </td>
+                <td className={`${amountCell} font-bold text-slate-950`}>
+                  {formatCurrency(share.totalAmount)}
+                </td>
+                <td className={`${amountCell} font-bold text-emerald-900`}>
+                  {formatCurrency(share.totalInAmount)}
+                </td>
+                <td className={`${amountCell} font-bold text-rose-900`}>
+                  {formatCurrency(share.totalOutAmount)}
+                </td>
+              </tr>
+            </tbody>
+        </table>
       </div>
     </section>
   );
@@ -97,45 +142,80 @@ function ShareSummary({ share }: { share: DashboardPositions['share'] }) {
 function SiteDepositSummary({ siteDeposit }: { siteDeposit: DashboardPositions['siteDeposit'] }) {
   return (
     <section aria-labelledby='site-deposit-heading' className='border-t border-slate-200 pt-5'>
-      <div className='mb-5 flex items-center gap-2'>
+      <div className='mb-3 flex items-center gap-2'>
         <WalletCards aria-hidden='true' className='size-5 text-sky-800' />
         <h2 id='site-deposit-heading' className='text-lg font-semibold text-slate-900'>
           Site Deposit Summary
         </h2>
+        <span className='ml-auto text-sm font-semibold tabular-nums text-sky-900'>
+          Total {formatCurrency(siteDeposit.totalAmount)}
+        </span>
       </div>
-      <div className='grid gap-6 lg:grid-cols-[minmax(220px,1fr)_2fr]'>
-        <SummaryMetric
-          label='Total Site Deposit Amount'
-          value={formatCurrency(siteDeposit.totalAmount)}
-        />
-        <div>
-          <h3 className='mb-2 text-sm font-medium text-slate-700'>
-            Layout-wise Site Deposit Amount
-          </h3>
-          {siteDeposit.layouts.length === 0 ? (
-            <p className='py-2 text-sm text-slate-500'>No layout site deposits recorded.</p>
-          ) : (
-            <ul className='divide-y divide-slate-200 border-y border-slate-200'>
-              {siteDeposit.layouts.map(layout => (
-                <li
-                  key={layout.id}
-                  className='flex flex-wrap items-center justify-between gap-2 py-3'
-                >
-                  <span className='flex min-w-0 items-center gap-2 text-sm text-slate-800'>
-                    <MapPin aria-hidden='true' className='size-4 shrink-0 text-slate-500' />
-                    <span className='truncate'>
-                      {layout.layoutCode ? `${layout.layoutCode} · ` : ''}
-                      {layout.name}
+      <div className='overflow-x-auto rounded-lg border border-slate-200 bg-white'>
+        <table className='w-full min-w-[760px] text-sm'>
+          <caption className='sr-only'>Site deposit incoming, outgoing, unique members, and balance by layout</caption>
+          <thead className='bg-slate-100 text-left text-xs font-semibold text-slate-600'>
+            <tr>
+              <th scope='col' className='px-4 py-3'>Layout</th>
+              <th scope='col' className='px-3 py-3 text-right text-emerald-800'>Total In</th>
+              <th scope='col' className='px-3 py-3 text-right text-rose-800'>Total Out</th>
+              <th scope='col' className='px-3 py-3 text-right'>Unique Members</th>
+              <th scope='col' className='px-4 py-3 text-right'>Site Deposit Amount</th>
+            </tr>
+          </thead>
+          <tbody className='divide-y divide-slate-200 text-slate-700'>
+            {siteDeposit.layouts.length === 0 ? (
+              <tr>
+                <td colSpan={5} className='px-4 py-6 text-center text-slate-500'>
+                  No layout site deposits recorded.
+                </td>
+              </tr>
+            ) : (
+              siteDeposit.layouts.map(layout => (
+                <tr key={layout.id} className='hover:bg-slate-50'>
+                  <th scope='row' className='px-4 py-2.5 text-left font-medium text-slate-800'>
+                    <span className='inline-flex min-w-0 items-center gap-2'>
+                      <MapPin aria-hidden='true' className='size-4 shrink-0 text-slate-400' />
+                      <span className='truncate'>
+                        {layout.layoutCode ? `${layout.layoutCode} · ` : ''}
+                        {layout.name}
+                      </span>
                     </span>
-                  </span>
-                  <span className='whitespace-nowrap text-sm font-semibold tabular-nums text-slate-950'>
+                  </th>
+                  <td className='whitespace-nowrap px-3 py-2.5 text-right font-semibold tabular-nums text-emerald-800'>
+                    {formatCurrency(layout.totalInAmount)}
+                  </td>
+                  <td className='whitespace-nowrap px-3 py-2.5 text-right font-semibold tabular-nums text-rose-800'>
+                    {formatCurrency(layout.totalOutAmount)}
+                  </td>
+                  <td className='whitespace-nowrap px-3 py-2.5 text-right font-semibold tabular-nums text-slate-800'>
+                    {layout.uniqueMemberCount.toLocaleString('en-IN')}
+                  </td>
+                  <td className='whitespace-nowrap px-4 py-2.5 text-right font-semibold tabular-nums text-slate-950'>
                     {formatCurrency(layout.amount)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+                  </td>
+                </tr>
+              ))
+            )}
+            <tr className='bg-sky-50/70'>
+              <th scope='row' className='px-4 py-2.5 text-left font-semibold text-slate-950'>
+                Total Site Deposit
+              </th>
+              <td className='whitespace-nowrap px-3 py-2.5 text-right font-bold tabular-nums text-emerald-900'>
+                {formatCurrency(siteDeposit.totalInAmount)}
+              </td>
+              <td className='whitespace-nowrap px-3 py-2.5 text-right font-bold tabular-nums text-rose-900'>
+                {formatCurrency(siteDeposit.totalOutAmount)}
+              </td>
+              <td className='whitespace-nowrap px-3 py-2.5 text-right font-bold tabular-nums text-slate-950'>
+                {siteDeposit.uniqueMemberCount.toLocaleString('en-IN')}
+              </td>
+              <td className='whitespace-nowrap px-4 py-2.5 text-right font-bold tabular-nums text-sky-900'>
+                {formatCurrency(siteDeposit.totalAmount)}
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </section>
   );

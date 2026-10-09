@@ -123,6 +123,9 @@ function Header() {
               <NavLink to={ROUTES.ADMIN.ROOT} className={navLinkClass}>
                 Dashboard
               </NavLink>
+              <NavLink to={ROUTES.ADMIN.LAYOUT_DASHBOARD} className={navLinkClass}>
+                Layout Dashboard
+              </NavLink>
 
               {/* Dropdowns */}
               {menuGroups.map(group => (
