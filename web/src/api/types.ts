@@ -93,7 +93,7 @@ export interface Site {
   registeredAmount: string;
   allottedMemberId: string | null;
   allotmentDate: string | null;
-  status: 'AVAILABLE' | 'ALLOCATED';
+  status: 'AVAILABLE' | 'TEMP_ALLOTTED' | 'ALLOTTED' | 'REGISTERED' | 'SETTLED';
   createdAt: string;
   updatedAt: string;
   layout: Pick<Layout, 'id' | 'layoutCode' | 'name'>;
@@ -361,6 +361,10 @@ export interface DashboardPositions {
     totalInAmount: string;
     totalOutAmount: string;
     uniqueMemberCount: number;
+    allottedMemberCount: number;
+    registeredMemberCount: number;
+    settledMemberCount: number;
+    notAllottedMemberCount: number;
     layouts: Array<{
       id: string;
       name: string;
@@ -369,6 +373,10 @@ export interface DashboardPositions {
       totalInAmount: string;
       totalOutAmount: string;
       uniqueMemberCount: number;
+      allottedMemberCount: number;
+      registeredMemberCount: number;
+      settledMemberCount: number;
+      notAllottedMemberCount: number;
     }>;
   };
 }
@@ -467,7 +475,7 @@ export interface DashboardTransactionTypeSummary {
   amount: string;
 }
 
-export interface DashboardTransaction extends Transaction {
+export interface DashboardTransaction extends Omit<Transaction, 'member' | 'party' | 'layout'> {
   member: { memberCode: string; name: string } | null;
   party: { name: string; partyType: string } | null;
   layout: { layoutCode: string; name: string } | null;

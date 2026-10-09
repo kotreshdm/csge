@@ -266,8 +266,8 @@ export async function getMembers(params?: {
     "postalCode",
   ].includes(params?.sortBy ?? "")
     ? (params?.sortBy as string)
-    : "memberCode";
-  const sortOrder = params?.sortOrder === "desc" ? "desc" : "asc";
+    : "joinDate";
+  const sortOrder = params?.sortOrder === "asc" ? "asc" : "desc";
 
   const safePage = Number.isFinite(page) && page > 0 ? Math.floor(page) : 1;
   const validPageSizes = [20, 50, 100];
@@ -311,10 +311,10 @@ export async function getMembers(params?: {
 
   const skip = (safePage - 1) * safeLimit;
 
-  const orderBy: Prisma.MemberOrderByWithRelationInput[] = [
-    { [sortBy]: sortOrder },
-    { memberId: "asc" },
-  ] as Prisma.MemberOrderByWithRelationInput[];
+  const orderBy: Prisma.MemberOrderByWithRelationInput[] =
+    sortBy === "joinDate"
+      ? [{ joinDate: { sort: sortOrder, nulls: "last" } }, { memberId: "desc" }]
+      : ([{ [sortBy]: sortOrder }, { memberId: "asc" }] as Prisma.MemberOrderByWithRelationInput[]);
 
   const [items, total] = await Promise.all([
     prisma.member.findMany({

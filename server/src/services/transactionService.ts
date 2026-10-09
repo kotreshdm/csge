@@ -1,5 +1,10 @@
 import { randomUUID } from "node:crypto";
-import { PaymentMode, Prisma, TransactionType } from "@prisma/client";
+import {
+  MemberStatus,
+  PaymentMode,
+  Prisma,
+  TransactionType,
+} from "@prisma/client";
 
 import prisma from "../db/prisma.js";
 import { AppError } from "../utils/AppError.js";
@@ -12,14 +17,14 @@ import {
 
 type TransactionInput = Record<string, unknown>;
 
-function formatLocalDateInput(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
+function formatDateInput(date: Date): string {
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(date.getUTCDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
 
-const transactionTypes = ["CREDIT", "DEBIT", "LAYOUT_EXPENSE"] as const;
+const transactionTypes = ["CREDIT", "DEBIT"] as const;
 const paymentModes = [
   "CASH",
   "CHEQUE",
@@ -43,15 +48,6 @@ function transactionConfig(type: TransactionType, subType: string) {
     .trim()
     .toUpperCase()
     .replace(/[\s-]+/g, "_");
-  if (type === "LAYOUT_EXPENSE") {
-    return {
-      member: false,
-      party: true,
-      requiredParty: false,
-      layout: true,
-      amounts: ["otherAmount"] as const,
-    };
-  }
   if (subtype === "SHARE" || subtype === "SHARE_WITHDRAWAL") {
     return {
       member: true,
@@ -106,6 +102,51 @@ function transactionConfig(type: TransactionType, subType: string) {
     layout: false,
     amounts: ["otherAmount"] as const,
   };
+}
+
+function isShareBalanceTransaction(transaction: {
+  type: TransactionType;
+  subType: string;
+  memberId: bigint | null;
+}) {
+  const subtype = transaction.subType
+    .trim()
+    .toUpperCase()
+    .replace(/[\s-]+/g, "_");
+  return (
+    transaction.memberId !== null &&
+    (transaction.type === "CREDIT" || transaction.type === "DEBIT") &&
+    (subtype === "SHARE" || subtype === "SHARE_WITHDRAWAL")
+  );
+}
+
+async function synchronizeMemberShareStatus(
+  tx: Prisma.TransactionClient,
+  memberIds: Iterable<bigint>,
+) {
+  for (const memberId of new Set(memberIds)) {
+    const transactions = await tx.transaction.findMany({
+      where: { memberId },
+      select: { type: true, subType: true, shareAmount: true },
+    });
+    const balance = transactions.reduce((total, transaction) => {
+      if (!isShareBalanceTransaction({ ...transaction, memberId })) {
+        return total;
+      }
+      return transaction.type === "CREDIT"
+        ? total.plus(transaction.shareAmount)
+        : total.minus(transaction.shareAmount);
+    }, new Prisma.Decimal(0));
+
+    await tx.member.update({
+      where: { memberId },
+      data: {
+        status: balance.greaterThan(0)
+          ? MemberStatus.ACTIVE
+          : MemberStatus.INACTIVE,
+      },
+    });
+  }
 }
 
 function optionalInteger(value: unknown, fieldName: string): number | null {
@@ -328,9 +369,9 @@ type TransactionRecord = Prisma.TransactionGetPayload<{
 function serializeTransaction(transaction: TransactionRecord) {
   return {
     ...transaction,
-    transactionDate: formatLocalDateInput(transaction.transactionDate),
+    transactionDate: formatDateInput(transaction.transactionDate),
     chequeDate: transaction.chequeDate
-      ? formatLocalDateInput(transaction.chequeDate)
+      ? formatDateInput(transaction.chequeDate)
       : null,
     id: transaction.id.toString(),
     transactionNo: transaction.transactionNo,
@@ -385,6 +426,30 @@ function parseTransactionId(id: string): bigint {
   return transactionId;
 }
 
+async function validateMemberJoinDate(
+  memberId: bigint | null,
+  transactionDate: Date,
+) {
+  if (memberId === null) return;
+
+  const member = await prisma.member.findUnique({
+    where: { memberId },
+    select: { joinDate: true },
+  });
+  if (!member?.joinDate) {
+    throw new AppError(400, "The selected member has no joining date.");
+  }
+
+  const joiningDate = member.joinDate.toISOString().slice(0, 10);
+  const transactionDay = transactionDate.toISOString().slice(0, 10);
+  if (joiningDate > transactionDay) {
+    throw new AppError(
+      400,
+      `Member joined on ${joiningDate}, after transaction date ${transactionDay}.`,
+    );
+  }
+}
+
 export async function getTransactions() {
   const transactions = await prisma.transaction.findMany({
     orderBy: [{ transactionDate: "desc" }, { id: "desc" }],
@@ -404,15 +469,21 @@ export async function getTransaction(id: string) {
 
 export async function createTransaction(input: TransactionInput) {
   const data = transactionData(input);
+  await validateMemberJoinDate(data.memberId, data.transactionDate);
   const createdBy = parseId(input.createdBy, "Created by member ID");
 
   try {
-    return serializeTransaction(
-      await prisma.transaction.create({
+    const created = await prisma.$transaction(async (tx) => {
+      const transaction = await tx.transaction.create({
         data: { ...data, transactionNo: `TXN-${randomUUID()}`, createdBy },
         include: transactionRelations,
-      }),
-    );
+      });
+      if (isShareBalanceTransaction(transaction)) {
+        await synchronizeMemberShareStatus(tx, [transaction.memberId!]);
+      }
+      return transaction;
+    });
+    return serializeTransaction(created);
   } catch (error) {
     handleTransactionError(error);
   }
@@ -420,16 +491,29 @@ export async function createTransaction(input: TransactionInput) {
 
 export async function updateTransaction(id: string, input: TransactionInput) {
   const data = transactionData(input);
+  await validateMemberJoinDate(data.memberId, data.transactionDate);
   const updatedBy = parseId(input.updatedBy, "Updated by member ID");
 
   try {
-    return serializeTransaction(
-      await prisma.transaction.update({
+    const updated = await prisma.$transaction(async (tx) => {
+      const previous = await tx.transaction.findUniqueOrThrow({
+        where: { id: parseTransactionId(id) },
+      });
+      const transaction = await tx.transaction.update({
         where: { id: parseTransactionId(id) },
         data: { ...data, updatedBy },
         include: transactionRelations,
-      }),
-    );
+      });
+      const affectedMembers = [
+        ...(isShareBalanceTransaction(previous) ? [previous.memberId!] : []),
+        ...(isShareBalanceTransaction(transaction)
+          ? [transaction.memberId!]
+          : []),
+      ];
+      await synchronizeMemberShareStatus(tx, affectedMembers);
+      return transaction;
+    });
+    return serializeTransaction(updated);
   } catch (error) {
     handleTransactionError(error);
   }
@@ -437,9 +521,18 @@ export async function updateTransaction(id: string, input: TransactionInput) {
 
 export async function deleteTransaction(id: string) {
   try {
-    const transaction = await prisma.transaction.delete({
-      where: { id: parseTransactionId(id) },
-      select: { id: true },
+    const transaction = await prisma.$transaction(async (tx) => {
+      const previous = await tx.transaction.findUniqueOrThrow({
+        where: { id: parseTransactionId(id) },
+      });
+      const deleted = await tx.transaction.delete({
+        where: { id: previous.id },
+        select: { id: true },
+      });
+      if (isShareBalanceTransaction(previous)) {
+        await synchronizeMemberShareStatus(tx, [previous.memberId!]);
+      }
+      return deleted;
     });
     return { ...transaction, id: transaction.id.toString() };
   } catch (error) {

@@ -1,14 +1,13 @@
 import { Fragment, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, ChevronUp, Search } from 'lucide-react';
-import { Link } from 'react-router-dom';
 
 import { getLayouts } from '../api/layouts';
 import { getMembers } from '../api/members';
 import { getSites } from '../api/sites';
 import { getTransactions } from '../api/transactions';
 import type { Site, Transaction } from '../api/types';
-import { ROUTES } from '../const/routs';
+import { DashboardPageHeader } from '../components/dashboard/DashboardPageHeader';
 
 type SortBy = 'date' | 'paid' | 'returned' | 'balance' | 'name';
 type AllotmentFilter = 'ALL' | 'ALLOTTED' | 'UNALLOTTED' | 'PAID_UNALLOTTED';
@@ -49,6 +48,24 @@ function formatCurrency(cents: bigint) {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(rupees);
+}
+
+function siteLiabilityCents(sites: Site[], memberBalance: bigint) {
+  const unsettledSitePrice = sites.reduce(
+    (total, site) => (site.status === 'SETTLED' ? total : total + amountCents(site.totalPrice)),
+    0n,
+  );
+  const liability = unsettledSitePrice - memberBalance;
+  return liability > 0n ? liability : 0n;
+}
+
+function memberBalanceAfterSettlements(sites: Site[], transactionBalance: bigint) {
+  const settledSitePrice = sites.reduce(
+    (total, site) => (site.status === 'SETTLED' ? total + amountCents(site.totalPrice) : total),
+    0n,
+  );
+  const balance = transactionBalance - settledSitePrice;
+  return balance > 0n ? balance : 0n;
 }
 
 function financialYearFor(date: string) {
@@ -338,16 +355,20 @@ export default function LayoutDashboardPage() {
           else periodReturned += cents;
         }
       }
+      const balance = memberBalanceAfterSettlements(
+        allottedSitesByMember.get(member.memberId) ?? [],
+        opening + periodPaid - periodReturned,
+      );
       return {
         ...member,
         memberType: membersById.get(member.memberId)?.memberType ?? member.memberType,
         opening,
         paid: periodPaid,
         returned: periodReturned,
-        balance: opening + periodPaid - periodReturned,
+        balance,
       };
     });
-  }, [layoutTransactions, dateBounds, membersById, sitesQuery.data, selectedLayoutId]);
+  }, [layoutTransactions, dateBounds, membersById, allottedSitesByMember]);
 
   const visibleMembers = useMemo(() => {
     const query = search.trim().toLocaleLowerCase();
@@ -371,36 +392,34 @@ export default function LayoutDashboardPage() {
     });
     const direction = sortOrder === 'asc' ? 1 : -1;
     rows.sort((left, right) => {
-      const leftNeedsAllotment =
-        left.paid > 0n && (allottedSitesByMember.get(left.memberId)?.length ?? 0) === 0;
-      const rightNeedsAllotment =
-        right.paid > 0n && (allottedSitesByMember.get(right.memberId)?.length ?? 0) === 0;
-      if (leftNeedsAllotment !== rightNeedsAllotment) return leftNeedsAllotment ? -1 : 1;
-
-      let comparison = 0;
-      if (sortBy === 'date') comparison = left.latestDate.localeCompare(right.latestDate);
-      else if (sortBy === 'paid')
-        comparison = left.paid < right.paid ? -1 : left.paid > right.paid ? 1 : 0;
-      else if (sortBy === 'returned')
-        comparison = left.returned < right.returned ? -1 : left.returned > right.returned ? 1 : 0;
-      else if (sortBy === 'balance')
-        comparison = left.balance < right.balance ? -1 : left.balance > right.balance ? 1 : 0;
-      else comparison = left.name.localeCompare(right.name);
+      const comparison =
+        sortBy === 'date'
+          ? left.latestDate.localeCompare(right.latestDate)
+          : sortBy === 'paid'
+            ? left.paid < right.paid
+              ? -1
+              : left.paid > right.paid
+                ? 1
+                : 0
+            : sortBy === 'returned'
+              ? left.returned < right.returned
+                ? -1
+                : left.returned > right.returned
+                  ? 1
+                  : 0
+              : sortBy === 'balance'
+                ? left.balance < right.balance
+                  ? -1
+                  : left.balance > right.balance
+                    ? 1
+                    : 0
+                : left.name.localeCompare(right.name);
       return comparison === 0
         ? left.memberCode.localeCompare(right.memberCode)
         : comparison * direction;
     });
     return rows;
-  }, [
-    allMemberAmounts,
-    search,
-    minimum,
-    maximum,
-    allotmentFilter,
-    allottedSitesByMember,
-    sortBy,
-    sortOrder,
-  ]);
+  }, [allMemberAmounts, search, minimum, maximum, allotmentFilter, sortBy, sortOrder]);
 
   const layoutTotal = allMemberAmounts.reduce(
     (total, member) => ({
@@ -409,6 +428,11 @@ export default function LayoutDashboardPage() {
       balance: total.balance + member.balance,
     }),
     { paid: 0n, returned: 0n, balance: 0n },
+  );
+  const layoutSiteLiability = allMemberAmounts.reduce(
+    (total, member) =>
+      total + siteLiabilityCents(allottedSitesByMember.get(member.memberId) ?? [], member.balance),
+    0n,
   );
 
   const resetFilters = () => {
@@ -459,32 +483,7 @@ export default function LayoutDashboardPage() {
   return (
     <main className='min-h-screen bg-slate-50 px-4 py-6 sm:px-6 lg:px-8'>
       <div className='mx-auto max-w-7xl space-y-5'>
-        <header className='flex flex-wrap items-end justify-between gap-3 border-b border-slate-200 pb-4'>
-          <div>
-            <p className='text-sm font-medium text-emerald-800'>Dashboard</p>
-            <h1 className='mt-1 text-2xl font-semibold text-slate-950'>Layout Dashboard</h1>
-          </div>
-          <div className='flex min-w-0 flex-wrap items-end gap-3'>
-            <nav
-              aria-label='Dashboard views'
-              className='flex gap-1 rounded-md border border-slate-200 bg-white p-1'
-            >
-              <Link
-                to={ROUTES.ADMIN.ROOT}
-                className='rounded px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100'
-              >
-                Overview
-              </Link>
-              <span
-                aria-current='page'
-                className='rounded bg-emerald-800 px-3 py-1.5 text-sm font-medium text-white'
-              >
-                Layout Dashboard
-              </span>
-            </nav>
-          </div>
-        </header>
-
+        <DashboardPageHeader title='Layout Dashboard' currentView='layout' />
         {loading ? (
           <p className='py-6 text-sm text-slate-500'>Loading layout transactions...</p>
         ) : error ? (
@@ -497,7 +496,7 @@ export default function LayoutDashboardPage() {
           <>
             <section
               aria-label='Selected layout summary'
-              className='grid grid-cols-2 gap-4 rounded-lg border border-slate-200 bg-white p-4 lg:grid-cols-4'
+              className='grid grid-cols-2 gap-4 rounded-lg border border-slate-200 bg-white p-4 lg:grid-cols-5'
             >
               {' '}
               <div className='min-w-0 border-l-2 border-slate-500 pl-3'>
@@ -538,6 +537,11 @@ export default function LayoutDashboardPage() {
                 label='Closing member balance'
                 value={formatCurrency(layoutTotal.balance)}
                 tone='border-sky-700'
+              />
+              <Metric
+                label='Outstanding site amount'
+                value={formatCurrency(layoutSiteLiability)}
+                tone='border-amber-600'
               />
             </section>
 
@@ -735,15 +739,19 @@ export default function LayoutDashboardPage() {
                   ) : (
                     visibleMembers.map(member => {
                       const allottedSites = allottedSitesByMember.get(member.memberId) ?? [];
-                      const totalSitePrice = allottedSites.reduce(
-                        (sum, site) => sum + amountCents(site.totalPrice),
+                      const unsettledSitePrice = allottedSites.reduce(
+                        (sum, site) =>
+                          site.status === 'SETTLED' ? sum : sum + amountCents(site.totalPrice),
                         0n,
                       );
                       const totalRegisteredAmount = allottedSites.reduce(
                         (sum, site) => sum + amountCents(site.registeredAmount),
                         0n,
                       );
-                      const siteLiability = totalSitePrice - member.balance;
+                      const siteLiability = siteLiabilityCents(allottedSites, member.balance);
+                      const hasSettledSite = allottedSites.some(site => site.status === 'SETTLED');
+                      const settledAtZeroBalance = member.balance === 0n && hasSettledSite;
+                      const balanceNeedsAttention = member.balance <= 0n && !settledAtZeroBalance;
                       const inRangeTransactions = member.transactions.filter(
                         transaction =>
                           !dateBounds ||
@@ -754,21 +762,28 @@ export default function LayoutDashboardPage() {
                         <Fragment key={member.memberId}>
                           <tr
                             className={
-                              member.balance <= 0n
-                                ? 'bg-rose-50/80 hover:bg-rose-100/80'
-                                : 'hover:bg-slate-50'
+                              settledAtZeroBalance
+                                ? 'bg-emerald-50/80 hover:bg-emerald-100/80'
+                                : balanceNeedsAttention
+                                  ? 'bg-rose-50/80 hover:bg-rose-100/80'
+                                  : 'hover:bg-slate-50'
                             }
                           >
                             <th
                               scope='row'
-                              className={`px-3 py-2.5 text-left font-medium text-slate-900 ${member.balance <= 0n ? 'border-l-2 border-rose-500' : ''}`}
+                              className={`px-3 py-2.5 text-left font-medium text-slate-900 ${settledAtZeroBalance ? 'border-l-2 border-emerald-500' : balanceNeedsAttention ? 'border-l-2 border-rose-500' : ''}`}
                             >
                               <span className='block'>{member.name}</span>
                               <span className='text-xs font-normal text-slate-500'>
                                 {member.memberCode}
                               </span>
-                              {member.balance <= 0n && (
+                              {balanceNeedsAttention && (
                                 <span className='sr-only'>Balance is zero or below.</span>
+                              )}
+                              {settledAtZeroBalance && (
+                                <span className='sr-only'>
+                                  Site settled; member balance is zero.
+                                </span>
                               )}
                             </th>
                             <td className='px-3 py-2.5 text-slate-700'>
@@ -785,7 +800,9 @@ export default function LayoutDashboardPage() {
                                       <span className='font-medium text-slate-900'>
                                         Site {site.siteNo}
                                       </span>
-                                      <span className='rounded bg-sky-50 px-1.5 py-0.5 text-[10px] font-semibold text-sky-800'>
+                                      <span
+                                        className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${site.status === 'SETTLED' ? 'bg-emerald-100 text-emerald-800' : 'bg-sky-50 text-sky-800'}`}
+                                      >
                                         {site.status}
                                       </span>
                                       <span className='text-xs tabular-nums text-slate-600'>
@@ -799,11 +816,13 @@ export default function LayoutDashboardPage() {
                                       )}
                                     </div>
                                   ))}
-                                  <p className='text-xs font-medium tabular-nums text-rose-800'>
+                                  <p
+                                    className={`text-xs font-medium tabular-nums ${siteLiability === 0n ? 'text-emerald-800' : 'text-rose-800'}`}
+                                  >
                                     Site liability {formatCurrency(siteLiability)}
                                     <span className='ml-1 font-normal text-slate-500'>
-                                      (assigned site price {formatCurrency(totalSitePrice)} less
-                                      member balance {formatCurrency(member.balance)})
+                                      (unsettled site price {formatCurrency(unsettledSitePrice)}{' '}
+                                      less member balance {formatCurrency(member.balance)})
                                     </span>
                                   </p>
                                   {totalRegisteredAmount > 0n && (
@@ -813,14 +832,12 @@ export default function LayoutDashboardPage() {
                                     </p>
                                   )}
                                 </div>
+                              ) : member.paid > 0n ? (
+                                <span className='inline-flex rounded bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-900'>
+                                  Paid, no site assigned
+                                </span>
                               ) : (
-                                member.paid > 0n ? (
-                                  <span className='inline-flex rounded bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-900'>
-                                    Paid, no site assigned
-                                  </span>
-                                ) : (
-                                  <span className='text-slate-400'>No site assigned</span>
-                                )
+                                <span className='text-slate-400'>No site assigned</span>
                               )}
                             </td>
                             <td className='whitespace-nowrap px-3 py-2.5 text-right tabular-nums text-slate-700'>
@@ -832,7 +849,9 @@ export default function LayoutDashboardPage() {
                             <td className='px-3 py-2.5 text-right font-medium tabular-nums text-rose-800'>
                               {formatCurrency(member.returned)}
                             </td>
-                            <td className='px-3 py-2.5 text-right font-semibold tabular-nums text-slate-950'>
+                            <td
+                              className={`px-3 py-2.5 text-right font-semibold tabular-nums ${settledAtZeroBalance ? 'text-emerald-800' : 'text-slate-950'}`}
+                            >
                               {formatCurrency(member.balance)}
                             </td>
                             <td className='px-3 py-2.5 text-center'>

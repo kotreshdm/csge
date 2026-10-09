@@ -3,6 +3,7 @@ export const ROUTES = {
   ADMIN: {
     ROOT: '/admin',
     LAYOUT_DASHBOARD: '/admin/layoutdashboard',
+    SHARE_DASHBOARD: '/admin/sharedashboard',
     LOGIN: '/admin/login',
     REGISTER: '/admin/register',
 

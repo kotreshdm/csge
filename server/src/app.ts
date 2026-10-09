@@ -16,7 +16,9 @@ export const buildApp = async () => {
     const message =
       error instanceof AppError
         ? error.message
-        : "Something went wrong. Please try again later.";
+        : process.env.NODE_ENV === "production"
+          ? "Something went wrong. Please try again later."
+          : error.message;
 
     const payload: Record<string, unknown> = {
       success: false,

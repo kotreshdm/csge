@@ -5,7 +5,19 @@ import { AppError } from "../utils/AppError.js";
 import { optionalDate, requiredString } from "../utils/validation.js";
 
 type Input = Record<string, unknown>;
-type SiteStatus = "AVAILABLE" | "ALLOCATED";
+type SiteStatus =
+  | "AVAILABLE"
+  | "TEMP_ALLOTTED"
+  | "ALLOTTED"
+  | "REGISTERED"
+  | "SETTLED";
+const siteStatuses: SiteStatus[] = [
+  "AVAILABLE",
+  "TEMP_ALLOTTED",
+  "ALLOTTED",
+  "REGISTERED",
+  "SETTLED",
+];
 
 const siteRelations = {
   layout: { select: { id: true, layoutCode: true, name: true } },
@@ -32,7 +44,10 @@ function parseDecimal(
   fieldName: string,
   defaultValue?: string,
 ): Prisma.Decimal {
-  const raw = value === undefined || value === null || value === "" ? defaultValue : value;
+  const raw =
+    value === undefined || value === null || value === ""
+      ? defaultValue
+      : value;
   if (typeof raw !== "string" && typeof raw !== "number") {
     throw new AppError(400, `${fieldName} is required.`);
   }
@@ -43,7 +58,10 @@ function parseDecimal(
     throw new AppError(400, `${fieldName} must be a valid decimal number.`);
   }
   if (!parsed.isFinite() || parsed.lessThan(0)) {
-    throw new AppError(400, `${fieldName} must be a non-negative decimal number.`);
+    throw new AppError(
+      400,
+      `${fieldName} must be a non-negative decimal number.`,
+    );
   }
   return parsed;
 }
@@ -54,10 +72,14 @@ function parseStatus(
 ): SiteStatus {
   if (value === undefined || value === null || value === "") return fallback;
   const status = String(value).trim().toUpperCase();
-  if (status !== "AVAILABLE" && status !== "ALLOCATED") {
-    throw new AppError(400, "Status must be AVAILABLE or ALLOCATED.");
+  if (status === "ALLOCATED") return "ALLOTTED";
+  if (!siteStatuses.includes(status as SiteStatus)) {
+    throw new AppError(
+      400,
+      `Status must be one of: ${siteStatuses.join(", ")}.`,
+    );
   }
-  return status;
+  return status as SiteStatus;
 }
 
 function siteData(input: Input) {
@@ -67,15 +89,22 @@ function siteData(input: Input) {
   const northSouth = parseDecimal(input.northSouth, "North-south dimension");
   const totalSqFeet = parseDecimal(input.totalSqFeet, "Total square feet");
   const totalPrice = parseDecimal(input.totalPrice, "Total price", "0");
-  const registeredAmount = parseDecimal(input.registeredAmount, "Registered amount", "0");
+  const registeredAmount = parseDecimal(
+    input.registeredAmount,
+    "Registered amount",
+    "0",
+  );
   const allottedMemberId = optionalMemberId(input.allottedMemberId);
   const allotmentDate = optionalDate(input.allotmentDate, "Allotment date");
   const status = parseStatus(
     input.status,
-    allottedMemberId ? "ALLOCATED" : "AVAILABLE",
+    allottedMemberId ? "ALLOTTED" : "AVAILABLE",
   );
-  if (status === "ALLOCATED" && allottedMemberId === null) {
-    throw new AppError(400, "An allocated site must have an allotted member.");
+  if (status !== "AVAILABLE" && allottedMemberId === null) {
+    throw new AppError(
+      400,
+      "A site must have an allotted member for this status.",
+    );
   }
   if (status === "AVAILABLE" && allottedMemberId !== null) {
     throw new AppError(
@@ -108,6 +137,7 @@ function serializeSite<
     registeredAmount: Prisma.Decimal;
     allottedMemberId: bigint | null;
     allotmentDate: Date | null;
+    status: string;
     layout: { id: bigint; layoutCode: string; name: string };
     allottedMember: {
       memberId: bigint;
@@ -127,6 +157,7 @@ function serializeSite<
     registeredAmount: site.registeredAmount.toString(),
     allottedMemberId: site.allottedMemberId?.toString() ?? null,
     allotmentDate: site.allotmentDate?.toISOString().slice(0, 10) ?? null,
+    status: parseStatus(site.status),
     layout: { ...site.layout, id: site.layout.id.toString() },
     allottedMember: site.allottedMember
       ? {
@@ -173,7 +204,6 @@ export async function createSite(input: Input) {
     handleSiteError(error);
   }
 }
-
 export async function updateSite(idValue: string, input: Input) {
   const id = parseId(idValue, "site ID");
   try {
@@ -198,7 +228,7 @@ export async function assignSite(idValue: string, memberValue: unknown) {
         where: { id },
         data: {
           allottedMemberId,
-          status: allottedMemberId ? "ALLOCATED" : "AVAILABLE",
+          status: allottedMemberId ? "ALLOTTED" : "AVAILABLE",
           allotmentDate: allottedMemberId
             ? new Date(new Date().toISOString().slice(0, 10))
             : null,
@@ -219,10 +249,10 @@ export async function changeSiteStatus(idValue: string, statusValue: unknown) {
     select: { allottedMemberId: true },
   });
   if (!existing) throw new AppError(404, "Site not found.");
-  if (status === "ALLOCATED" && existing.allottedMemberId === null) {
+  if (status !== "AVAILABLE" && existing.allottedMemberId === null) {
     throw new AppError(
       400,
-      "Assign a member before marking the site allocated.",
+      "Assign a member before selecting this site status.",
     );
   }
   try {

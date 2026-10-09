@@ -113,40 +113,6 @@ export function getTransactionSubtypes(type: TransactionPayload['type']) {
   );
 }
 
-export function resetTransactionDependencies(
-  previous: TransactionPayload,
-  type: TransactionPayload['type'],
-  subType: string,
-): TransactionPayload {
-  const config = getTransactionFormConfig(type, subType);
-  return normalizeTransaction({
-    ...previous,
-    type,
-    subType,
-    memberId: null,
-    partyId: null,
-    layoutId: null,
-    shareAmount: '',
-    shareFeeAmount: '',
-    membershipFeeAmount: '',
-    siteDepositAmount: '',
-    welfareFundAmount: '',
-    booksFormsAmount: '',
-    miscellaneousAmount: '',
-    otherAmount: '',
-    totalAmount: ZERO,
-    receiptNo: null,
-    ...(config.allowPaymentDetails
-      ? {}
-      : {
-          paymentMode: null,
-          chequeNo: null,
-          chequeDate: null,
-          bankReferenceNo: null,
-        }),
-  });
-}
-
 export function inputValue(value: string | number | null | undefined) {
   return value === null || value === undefined ? '' : String(value);
 }
@@ -159,8 +125,9 @@ export function getLocalDateInputValue(date: Date = new Date()) {
 }
 
 export function blankTransaction(memberId = ''): TransactionPayload {
+  const transactionDate = getLocalDateInputValue();
   return {
-    transactionDate: getLocalDateInputValue(),
+    transactionDate,
     cashbookNo: '1',
     cashbookPage: '1',
     type: 'CREDIT',
@@ -180,7 +147,7 @@ export function blankTransaction(memberId = ''): TransactionPayload {
     receiptNo: null,
     paymentMode: 'CASH',
     chequeNo: null,
-    chequeDate: null,
+    chequeDate: transactionDate,
     bankReferenceNo: null,
     remarks: null,
     createdBy: memberId || undefined,
@@ -254,13 +221,6 @@ export function normalizeTransaction(form: TransactionPayload): TransactionPaylo
   };
 
   if (next.type !== 'CREDIT' && next.type !== 'DEBIT') next.type = 'CREDIT';
-  if (next.paymentMode !== 'CHEQUE') {
-    next.chequeNo = null;
-    next.chequeDate = null;
-  }
-  if (next.paymentMode !== 'BANK_TRANSFER') {
-    next.bankReferenceNo = null;
-  }
   next.totalAmount = calculateTotalAmount(next);
   return next;
 }
@@ -302,7 +262,7 @@ export function buildTransactionPayload(
       : ZERO,
     otherAmount: activeAmounts.has('otherAmount') ? next.otherAmount || ZERO : ZERO,
     totalAmount: calculateTotalAmount(next),
-    receiptNo: next.receiptNo || null,
+    receiptNo: config.showTotalAmount ? next.receiptNo || null : null,
     paymentMode: next.paymentMode || null,
     chequeNo: chequePayment ? next.chequeNo || null : null,
     chequeDate: chequePayment ? next.chequeDate || null : null,

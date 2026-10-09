@@ -7,7 +7,8 @@ import { toast } from 'sonner';
 import { getLayouts } from '../../api/layouts';
 import { getMembers } from '../../api/members';
 import { assignSite, createSite, getSites, updateSite, updateSiteStatus } from '../../api/sites';
-import type { Layout, Site, SitePayload } from '../../api/types';
+import { getTransactions } from '../../api/transactions';
+import type { Layout, Site, SitePayload, Transaction } from '../../api/types';
 import { Button } from '@/components/ui/button';
 
 async function getAllMembers() {
@@ -35,14 +36,36 @@ export default function Sites() {
   const [totalSqFeet, setTotalSqFeet] = useState('');
   const [totalPrice, setTotalPrice] = useState('0');
   const [registeredAmount, setRegisteredAmount] = useState('0');
+  const [allottedMemberId, setAllottedMemberId] = useState('');
   const [allotmentDate, setAllotmentDate] = useState('');
+  const [status, setStatus] = useState<Site['status']>('AVAILABLE');
 
   const sitesQuery = useQuery({ queryKey: ['sites'], queryFn: getSites });
   const layoutsQuery = useQuery({ queryKey: ['layouts'], queryFn: getLayouts });
   const membersQuery = useQuery({ queryKey: ['site-member-options'], queryFn: getAllMembers });
+  const transactionsQuery = useQuery({ queryKey: ['site-allotment-transactions'], queryFn: getTransactions });
   const sites = useMemo(() => sitesQuery.data?.data.items ?? [], [sitesQuery.data]);
   const layouts = layoutsQuery.data?.data.items ?? [];
   const members = membersQuery.data ?? [];
+  const paidMemberIds = useMemo(() => {
+    const memberIds = new Set<string>();
+    for (const transaction of transactionsQuery.data?.data.items ?? []) {
+      if (
+        transaction.type === 'CREDIT' &&
+        transaction.layoutId === layoutId &&
+        transaction.memberId &&
+        Number(transaction.siteDepositAmount) > 0
+      ) {
+        memberIds.add(transaction.memberId);
+      }
+    }
+    return memberIds;
+  }, [layoutId, transactionsQuery.data]);
+  const eligibleMembers = members.filter(
+    member =>
+      paidMemberIds.has(member.memberId) ||
+      (editingSite?.layoutId === layoutId && member.memberId === editingSite.allottedMemberId),
+  );
   const sitesByLayout = useMemo(() => {
     const grouped = new Map<string, Site[]>();
     for (const site of sites) {
@@ -95,7 +118,9 @@ export default function Sites() {
     setTotalSqFeet('');
     setTotalPrice('0');
     setRegisteredAmount('0');
+    setAllottedMemberId('');
     setAllotmentDate('');
+    setStatus('AVAILABLE');
     setIsFormOpen(true);
   };
 
@@ -108,7 +133,9 @@ export default function Sites() {
     setTotalSqFeet(site.totalSqFeet);
     setTotalPrice(site.totalPrice);
     setRegisteredAmount(site.registeredAmount);
+    setAllottedMemberId(site.allottedMemberId ?? '');
     setAllotmentDate(site.allotmentDate ?? '');
+    setStatus(site.status);
     setIsFormOpen(true);
   };
 
@@ -124,9 +151,9 @@ export default function Sites() {
         totalSqFeet,
         totalPrice,
         registeredAmount,
-        allottedMemberId: editingSite?.allottedMemberId ?? null,
+        allottedMemberId: allottedMemberId || null,
         allotmentDate: allotmentDate || null,
-        status: editingSite?.status ?? 'AVAILABLE',
+        status,
       },
     });
   };
@@ -193,55 +220,20 @@ export default function Sites() {
                                 {site.siteNo}
                               </td>
                               <td className='px-4 py-3'>
-                                <div className='flex items-center gap-2'>
-                                  <span
-                                    className={`inline-flex rounded-sm px-2 py-1 text-xs font-semibold ${
-                                      site.status === 'AVAILABLE'
-                                        ? 'bg-emerald-100 text-emerald-800'
-                                        : 'bg-sky-100 text-sky-800'
-                                    }`}
-                                  >
-                                    {site.status}
-                                  </span>
-                                  <select
-                                    aria-label={`Change status for site ${site.siteNo}`}
-                                    value={site.status}
-                                    disabled={statusMutation.isPending}
-                                    onChange={event =>
-                                      statusMutation.mutate({
-                                        id: site.id,
-                                        status: event.target.value as Site['status'],
-                                      })
-                                    }
-                                    className='h-8 rounded-md border border-slate-300 bg-white px-2 text-xs text-slate-700'
-                                  >
-                                    <option value='AVAILABLE'>AVAILABLE</option>
-                                    <option value='ALLOCATED' disabled={!site.allottedMemberId}>
-                                      ALLOCATED
-                                    </option>
-                                  </select>
-                                </div>
-                              </td>
-                              <td className='min-w-64 px-4 py-3'>
-                                <select
-                                  aria-label={`Assign site ${site.siteNo} to member`}
-                                  value={site.allottedMemberId ?? ''}
-                                  disabled={membersQuery.isLoading || assignmentMutation.isPending}
-                                  onChange={event =>
-                                    assignmentMutation.mutate({
-                                      id: site.id,
-                                      memberId: event.target.value || null,
-                                    })
-                                  }
-                                  className='h-9 w-full rounded-md border border-slate-300 bg-white px-2.5 text-sm text-slate-800'
+                                <span
+                                  className={`inline-flex rounded-sm px-2 py-1 text-xs font-semibold ${
+                                    site.status === 'AVAILABLE'
+                                      ? 'bg-emerald-100 text-emerald-800'
+                                      : 'bg-sky-100 text-sky-800'
+                                  }`}
                                 >
-                                  <option value=''>Not allotted</option>
-                                  {members.map(member => (
-                                    <option key={member.memberId} value={member.memberId}>
-                                      {member.memberCode} · {member.name}
-                                    </option>
-                                  ))}
-                                </select>
+                                  {site.status}
+                                </span>
+                              </td>
+                              <td className='px-4 py-3 text-slate-700'>
+                                {site.allottedMember
+                                  ? `${site.allottedMember.memberCode} · ${site.allottedMember.name}`
+                                  : 'Not allotted'}
                               </td>
                               <td className='px-4 py-3 text-right'>
                                 <Button
@@ -284,7 +276,14 @@ export default function Sites() {
                 <select
                   required
                   value={layoutId}
-                  onChange={event => setLayoutId(event.target.value)}
+                  onChange={event => {
+                    setLayoutId(event.target.value);
+                    if (!paidMemberIds.has(allottedMemberId)) {
+                      setAllottedMemberId('');
+                      setStatus('AVAILABLE');
+                      setAllotmentDate('');
+                    }
+                  }}
                   className='h-10 rounded-md border border-slate-300 bg-white px-3 font-normal text-slate-900'
                 >
                   {layouts.map(layout => (
@@ -371,6 +370,58 @@ export default function Sites() {
                     onChange={event => setAllotmentDate(event.target.value)}
                     className='h-10 rounded-md border border-slate-300 bg-white px-3 font-normal text-slate-900'
                   />
+                </label>
+              </div>
+              <div className='grid gap-4 border-t border-slate-200 pt-4 sm:grid-cols-2'>
+                <label className='grid gap-1.5 text-sm font-medium text-slate-700'>
+                  <span>Allotted member</span>
+                  <select
+                    value={allottedMemberId}
+                    disabled={membersQuery.isLoading || transactionsQuery.isLoading}
+                    onChange={event => {
+                      const nextMemberId = event.target.value;
+                      setAllottedMemberId(nextMemberId);
+                      if (nextMemberId) setStatus('ALLOTTED');
+                      else {
+                        setStatus('AVAILABLE');
+                        setAllotmentDate('');
+                      }
+                    }}
+                    className='h-10 rounded-md border border-slate-300 bg-white px-3 font-normal text-slate-900'
+                  >
+                    <option value=''>Not allotted</option>
+                    {eligibleMembers.map(member => (
+                      <option key={member.memberId} value={member.memberId}>
+                        {member.memberCode} · {member.name}
+                      </option>
+                    ))}
+                  </select>
+                  {!transactionsQuery.isLoading && eligibleMembers.length === 0 ? (
+                    <span className='text-xs font-normal text-slate-500'>
+                      No members have paid a site deposit for this layout.
+                    </span>
+                  ) : null}
+                </label>
+                <label className='grid gap-1.5 text-sm font-medium text-slate-700'>
+                  <span>Site status</span>
+                  <select
+                    value={status}
+                    onChange={event => {
+                      const nextStatus = event.target.value as Site['status'];
+                      setStatus(nextStatus);
+                      if (nextStatus === 'AVAILABLE') {
+                        setAllottedMemberId('');
+                        setAllotmentDate('');
+                      }
+                    }}
+                    className='h-10 rounded-md border border-slate-300 bg-white px-3 font-normal text-slate-900'
+                  >
+                    <option value='AVAILABLE'>AVAILABLE</option>
+                    <option value='TEMP_ALLOTTED' disabled={!allottedMemberId}>TEMP_ALLOTTED</option>
+                    <option value='ALLOTTED' disabled={!allottedMemberId}>ALLOTTED</option>
+                    <option value='REGISTERED' disabled={!allottedMemberId}>REGISTERED</option>
+                    <option value='SETTLED' disabled={!allottedMemberId}>SETTLED</option>
+                  </select>
                 </label>
               </div>
               <div className='flex justify-end gap-2 border-t border-slate-200 pt-4'>

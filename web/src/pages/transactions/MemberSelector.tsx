@@ -3,14 +3,8 @@ import type { TransactionPayload } from '../../api/types';
 interface MemberSelectorProps {
   form: TransactionPayload;
   required?: boolean;
-  members: Array<{
-    memberId: string;
-    memberCode: string;
-    name: string;
-    mobile?: string | null;
-    recieptNo?: string | null;
-    joinDate?: string | null;
-  }>;
+  members: MemberOption[];
+  selectedMember?: MemberOption;
   memberLookup: string;
   isMemberOptionsOpen: boolean;
   membersLoading: boolean;
@@ -19,10 +13,20 @@ interface MemberSelectorProps {
   onSelectMember: (memberId: string) => void;
 }
 
+interface MemberOption {
+    memberId: string;
+    memberCode: string;
+    name: string;
+    mobile?: string | null;
+    recieptNo?: string | null;
+    joinDate?: string | null;
+}
+
 export function MemberSelector({
   form,
   required = false,
   members,
+  selectedMember,
   memberLookup,
   isMemberOptionsOpen,
   membersLoading,
@@ -36,7 +40,6 @@ export function MemberSelector({
     ),
   );
 
-  const selectedMember = members.find(member => member.memberId === form.memberId);
   const memberInputValue = isMemberOptionsOpen
     ? memberLookup
     : selectedMember

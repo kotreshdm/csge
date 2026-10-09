@@ -33,16 +33,25 @@ import {
   getFilteredParties,
   getTransactionFormConfig,
   normalizeTransaction,
-  resetTransactionDependencies,
 } from './transactionRules';
 import { validateTransaction } from './transactionValidation';
 
 async function getAllMembers() {
-  const firstPage = await getMembers({ page: 1, limit: 100 });
+  const firstPage = await getMembers({
+    page: 1,
+    limit: 100,
+    sortBy: 'joinDate',
+    sortOrder: 'desc',
+  });
   const members = [...firstPage.data.items];
 
   for (let page = 2; page <= firstPage.data.totalPages; page += 1) {
-    const response = await getMembers({ page, limit: 100 });
+    const response = await getMembers({
+      page,
+      limit: 100,
+      sortBy: 'joinDate',
+      sortOrder: 'desc',
+    });
     members.push(...response.data.items);
   }
 
@@ -70,6 +79,21 @@ function FormSectionHeading({
       <h2 className='text-sm font-semibold text-slate-800'>{title}</h2>
     </div>
   );
+}
+
+function amountCents(value: string | number | null | undefined) {
+  const match = /^(\d+)(?:\.(\d{1,2}))?$/.exec(String(value ?? '0').trim());
+  if (!match) return 0n;
+  return BigInt(match[1]) * 100n + BigInt((match[2] ?? '').padEnd(2, '0'));
+}
+
+function formatCurrency(cents: bigint) {
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(Number(cents) / 100);
 }
 
 interface TransactionFormPageProps {
@@ -125,15 +149,83 @@ export default function TransactionFormPage({ mode }: TransactionFormPageProps) 
   });
 
   const members = membersData ?? [];
+  const eligibleMembers = useMemo(() => {
+    const transactionDate = form.transactionDate.slice(0, 10);
+    return members.filter(member => {
+      const joinDate = member.joinDate?.slice(0, 10);
+      return Boolean(joinDate && transactionDate && joinDate <= transactionDate);
+    });
+  }, [form.transactionDate, members]);
   const parties = partiesData?.data.items ?? [];
   const layouts = layoutsData?.data.items ?? [];
   const transaction = transactionData?.data;
   const filteredParties = useMemo(() => getFilteredParties(parties, form), [parties, form]);
   const fieldConfig = getTransactionFormConfig(form.type, form.subType);
+  const overdraftWarning = useMemo(() => {
+    if (form.type !== 'DEBIT' || !form.memberId) return null;
+
+    const subtype = form.subType
+      .trim()
+      .toUpperCase()
+      .replace(/[\s-]+/g, '_');
+    const account = ['SHARE', 'SHARE_WITHDRAWAL'].includes(subtype)
+      ? 'share'
+      : ['SITE', 'SITE_DEPOSIT', 'LAYOUT'].includes(subtype)
+        ? 'site'
+        : null;
+    if (!account) return null;
+
+    const transactions = transactionListData?.data.items;
+    if (!transactions) return null;
+
+    const balance = transactions.reduce((total, transaction) => {
+      if (
+        transaction.memberId !== form.memberId ||
+        (transaction.type !== 'CREDIT' && transaction.type !== 'DEBIT')
+      ) {
+        return total;
+      }
+      const transactionSubtype = transaction.subType
+        .trim()
+        .toUpperCase()
+        .replace(/[\s-]+/g, '_');
+      const matchesAccount =
+        account === 'share'
+          ? ['SHARE', 'SHARE_WITHDRAWAL'].includes(transactionSubtype)
+          : ['SITE', 'SITE_DEPOSIT', 'LAYOUT'].includes(transactionSubtype);
+      if (!matchesAccount) return total;
+
+      const amount = amountCents(
+        account === 'share' ? transaction.shareAmount : transaction.siteDepositAmount,
+      );
+      return total + (transaction.type === 'CREDIT' ? amount : -amount);
+    }, 0n);
+
+    const amount = amountCents(account === 'share' ? form.shareAmount : form.siteDepositAmount);
+    const maximum = balance > 0n ? balance : 0n;
+    return amount > maximum
+      ? { account, maximum: formatCurrency(maximum) }
+      : null;
+  }, [
+    form.memberId,
+    form.shareAmount,
+    form.siteDepositAmount,
+    form.subType,
+    form.type,
+    isEditing,
+    transactionListData,
+  ]);
   const selectedMember = useMemo(
     () => members.find(member => member.memberId === form.memberId),
     [members, form.memberId],
   );
+  const memberDateError = form.memberId
+    ? !selectedMember?.joinDate
+      ? 'The selected member has no joining date and cannot be used for this transaction.'
+      : selectedMember.joinDate.slice(0, 10) > form.transactionDate.slice(0, 10)
+        ? 'This member joined after the transaction date. Select an eligible member or change the date.'
+        : null
+    : null;
   const isWaitingForRequiredSelection =
     !form.subType ||
     (fieldConfig.requiredMember && !form.memberId) ||
@@ -177,9 +269,16 @@ export default function TransactionFormPage({ mode }: TransactionFormPageProps) 
     const lastTransaction = transactions.reduce((latest, candidate) =>
       BigInt(candidate.id) > BigInt(latest.id) ? candidate : latest,
     );
-
-    setForm(previous =>
-      normalizeTransaction({
+    const latestDatedTransaction = transactions.reduce((latest, candidate) =>
+      candidate.transactionDate.slice(0, 10) > latest.transactionDate.slice(0, 10)
+        ? candidate
+        : latest,
+    );
+    setForm(previous => {
+      const transactionDate = hasSelectedTransactionDate.current
+        ? previous.transactionDate
+        : latestDatedTransaction.transactionDate.slice(0, 10);
+      return normalizeTransaction({
         ...previous,
         cashbookNo:
           previous.cashbookNo === '' ? (lastTransaction.cashbookNo ?? '1') : previous.cashbookNo,
@@ -187,12 +286,10 @@ export default function TransactionFormPage({ mode }: TransactionFormPageProps) 
           previous.cashbookPage === ''
             ? (lastTransaction.cashbookPage ?? '1')
             : previous.cashbookPage,
-        transactionDate: hasSelectedTransactionDate.current
-          ? previous.transactionDate
-          : lastTransaction.transactionDate.slice(0, 10),
-        chequeDate: previous.chequeDate ?? lastTransaction.transactionDate?.slice(0, 10) ?? null,
-      }),
-    );
+        transactionDate,
+        chequeDate: transactionDate,
+      });
+    });
   }, [isEditing, transactionListData]);
 
   useEffect(() => {
@@ -201,10 +298,12 @@ export default function TransactionFormPage({ mode }: TransactionFormPageProps) 
     }
 
     setForm(previous =>
-      normalizeTransaction({
-        ...previous,
-        receiptNo: selectedMember.recieptNo ?? '',
-      }),
+      previous.receiptNo
+        ? previous
+        : normalizeTransaction({
+            ...previous,
+            receiptNo: selectedMember.recieptNo ?? '',
+          }),
     );
   }, [form.subType, form.type, isEditing, selectedMember]);
 
@@ -267,46 +366,38 @@ export default function TransactionFormPage({ mode }: TransactionFormPageProps) 
     if (field === 'subType' && value !== form.subType) {
       setMemberLookup('');
       setIsMemberOptionsOpen(false);
-      setForm(previous => resetTransactionDependencies(previous, previous.type, String(value)));
-      return;
     }
     if (field === 'paymentMode' && value !== form.paymentMode) {
       const paymentMode = value as TransactionPayload['paymentMode'];
-      setForm(previous =>
-        normalizeTransaction({
-          ...previous,
-          paymentMode,
-          chequeNo: paymentMode === 'CHEQUE' ? previous.chequeNo : null,
-          chequeDate: paymentMode === 'CHEQUE' ? previous.chequeDate : null,
-          bankReferenceNo: paymentMode === 'BANK_TRANSFER' ? previous.bankReferenceNo : null,
-        }),
-      );
+      setForm(previous => normalizeTransaction({ ...previous, paymentMode }));
       return;
     }
     if (field === 'transactionDate') {
       hasSelectedTransactionDate.current = true;
+      if (!isEditing) {
+        setForm(previous =>
+          normalizeTransaction({
+            ...previous,
+            transactionDate: value as string,
+            chequeDate: value as string,
+          }),
+        );
+        return;
+      }
     }
     setForm(previous => normalizeTransaction({ ...previous, [field]: value }));
   };
 
   const handleTypeChange = (value: TransactionPayload['type']) => {
-    setMemberLookup('');
-    setIsMemberOptionsOpen(false);
-    setForm(previous => resetTransactionDependencies(previous, value, ''));
+    setForm(previous => normalizeTransaction({ ...previous, type: value }));
   };
 
   const selectMember = (memberId: string) => {
     const member = members.find(candidate => candidate.memberId === memberId);
-    const joinDate = member?.joinDate?.slice(0, 10);
-    if (joinDate) {
-      hasSelectedTransactionDate.current = true;
-    }
-
     setForm(previous =>
       normalizeTransaction({
         ...previous,
         memberId: memberId || null,
-        ...(joinDate ? { transactionDate: joinDate } : {}),
         ...(member && !isEditing && previous.type === 'CREDIT' && previous.subType === 'SHARE'
           ? {
               receiptNo: member.recieptNo ?? '',
@@ -319,7 +410,7 @@ export default function TransactionFormPage({ mode }: TransactionFormPageProps) 
   const save = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    const errors = validateTransaction(form);
+    const errors = validateTransaction(form, selectedMember?.joinDate);
     if (Object.keys(errors).length > 0) {
       const firstError = Object.values(errors)[0];
       toast.error(firstError);
@@ -404,7 +495,8 @@ export default function TransactionFormPage({ mode }: TransactionFormPageProps) 
                         <MemberSelector
                           form={form}
                           required={fieldConfig.requiredMember}
-                          members={members}
+                          members={eligibleMembers}
+                          selectedMember={selectedMember}
                           memberLookup={memberLookup}
                           isMemberOptionsOpen={isMemberOptionsOpen}
                           membersLoading={membersLoading}
@@ -412,6 +504,11 @@ export default function TransactionFormPage({ mode }: TransactionFormPageProps) 
                           onToggleMembers={setIsMemberOptionsOpen}
                           onSelectMember={selectMember}
                         />
+                      ) : null}
+                      {fieldConfig.showMember && memberDateError ? (
+                        <p role='alert' className='text-sm font-normal text-rose-700 sm:col-span-2'>
+                          {memberDateError}
+                        </p>
                       ) : null}
 
                       {fieldConfig.showParty ? (
@@ -457,6 +554,16 @@ export default function TransactionFormPage({ mode }: TransactionFormPageProps) 
                         onFieldChange={updateField}
                       />
                     </section>
+                  ) : null}
+
+                  {overdraftWarning ? (
+                    <p
+                      role='status'
+                      className='rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900'
+                    >
+                      Warning: available {overdraftWarning.account} balance is{' '}
+                      {overdraftWarning.maximum}.
+                    </p>
                   ) : null}
 
                   {form.subType ? (

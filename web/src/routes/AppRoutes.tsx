@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { ROUTES } from '../const/routs';
 import AdminDashboard from '../pages/AdminDashboard';
 import LayoutDashboardPage from '../pages/LayoutDashboardPage';
+import ShareDashboardPage from '../pages/ShareDashboardPage';
 import Login from '../pages/Login';
 import Register from '../pages/Register';
 import AddTransaction from '../pages/transactions/AddTransaction';
@@ -19,6 +20,10 @@ const protectedRoutes: { path: string; element: ReactNode }[] = [
   {
     path: ROUTES.ADMIN.LAYOUT_DASHBOARD,
     element: <LayoutDashboardPage />,
+  },
+  {
+    path: ROUTES.ADMIN.SHARE_DASHBOARD,
+    element: <ShareDashboardPage />,
   },
   {
     path: ROUTES.ADMIN.TRANSACTIONS,

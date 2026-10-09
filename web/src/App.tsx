@@ -7,6 +7,7 @@ import Footer from './components/layout/Footer';
 import { ROUTES } from './const/routs';
 import AdminDashboard from './pages/AdminDashboard';
 import LayoutDashboardPage from './pages/LayoutDashboardPage';
+import ShareDashboardPage from './pages/ShareDashboardPage';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Members from './pages/members/Members';
@@ -62,6 +63,15 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <LayoutDashboardPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path={ROUTES.ADMIN.SHARE_DASHBOARD}
+            element={
+              <ProtectedRoute>
+                <ShareDashboardPage />
               </ProtectedRoute>
             }
           />

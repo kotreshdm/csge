@@ -6,8 +6,8 @@ const zero = () => new Prisma.Decimal(0);
 const amountOrZero = (amount: Prisma.Decimal | null) => amount ?? zero();
 
 export async function getDashboardPositions() {
-  const [shareTransactions, siteTransactions, memberCounts] = await Promise.all(
-    [
+  const [shareTransactions, siteTransactions, memberCounts, siteRecords] =
+    await Promise.all([
       prisma.transaction.groupBy({
         by: ["memberId", "type"],
         where: { subType: "SHARE", type: { in: ["CREDIT", "DEBIT"] } },
@@ -22,8 +22,16 @@ export async function getDashboardPositions() {
         by: ["memberType", "status"],
         _count: { _all: true },
       }),
-    ],
-  );
+      prisma.site.findMany({
+        where: {
+          allottedMemberId: { not: null },
+          status: {
+            in: ["TEMP_ALLOTTED", "ALLOTTED", "REGISTERED", "SETTLED"],
+          },
+        },
+        select: { layoutId: true, allottedMemberId: true, status: true },
+      }),
+    ]);
 
   const shareBalances = new Map<string, Prisma.Decimal>();
   let totalShare = zero();
@@ -90,6 +98,28 @@ export async function getDashboardPositions() {
   const layoutIncoming = new Map<string, Prisma.Decimal>();
   const layoutOutgoing = new Map<string, Prisma.Decimal>();
   const layoutMembers = new Map<string, Map<string, Prisma.Decimal>>();
+  const layoutSiteMembers = new Map<
+    string,
+    { allotted: Set<string>; registered: Set<string>; settled: Set<string> }
+  >();
+  for (const site of siteRecords) {
+    if (site.allottedMemberId === null) continue;
+    const layoutId = site.layoutId.toString();
+    const memberId = site.allottedMemberId.toString();
+    const members = layoutSiteMembers.get(layoutId) ?? {
+      allotted: new Set<string>(),
+      registered: new Set<string>(),
+      settled: new Set<string>(),
+    };
+    if (site.status === "TEMP_ALLOTTED" || site.status === "ALLOTTED") {
+      members.allotted.add(memberId);
+    } else if (site.status === "REGISTERED") {
+      members.registered.add(memberId);
+    } else if (site.status === "SETTLED") {
+      members.settled.add(memberId);
+    }
+    layoutSiteMembers.set(layoutId, members);
+  }
   for (const transaction of siteTransactions) {
     const amount = amountOrZero(transaction._sum.siteDepositAmount);
     const signedAmount =
@@ -114,7 +144,8 @@ export async function getDashboardPositions() {
       }
       if (transaction.memberId !== null) {
         const memberId = transaction.memberId.toString();
-        const members = layoutMembers.get(layoutId) ?? new Map<string, Prisma.Decimal>();
+        const members =
+          layoutMembers.get(layoutId) ?? new Map<string, Prisma.Decimal>();
         members.set(
           memberId,
           (members.get(memberId) ?? zero()).plus(signedAmount),
@@ -122,6 +153,36 @@ export async function getDashboardPositions() {
         layoutMembers.set(layoutId, members);
       }
     }
+  }
+
+  const notAllottedByLayout = new Map<string, number>();
+  for (const [layoutId, memberBalances] of layoutMembers) {
+    const siteMembers = layoutSiteMembers.get(layoutId);
+    const assignedMemberIds = new Set([
+      ...(siteMembers?.allotted ?? []),
+      ...(siteMembers?.registered ?? []),
+      ...(siteMembers?.settled ?? []),
+    ]);
+    let count = 0;
+    for (const [memberId, balance] of memberBalances) {
+      if (balance.greaterThan(0) && !assignedMemberIds.has(memberId)) {
+        count += 1;
+      }
+    }
+    notAllottedByLayout.set(layoutId, count);
+  }
+  const siteMemberTotals = [...layoutSiteMembers.entries()].reduce(
+    (totals, [layoutId, members]) => {
+      totals.allotted += members.allotted.size;
+      totals.registered += members.registered.size;
+      totals.settled += members.settled.size;
+      totals.notAllotted += notAllottedByLayout.get(layoutId) ?? 0;
+      return totals;
+    },
+    { allotted: 0, registered: 0, settled: 0, notAllotted: 0 },
+  );
+  for (const [layoutId, count] of notAllottedByLayout) {
+    if (!layoutSiteMembers.has(layoutId)) siteMemberTotals.notAllotted += count;
   }
 
   const layoutRows = depositsByLayout.size
@@ -143,10 +204,13 @@ export async function getDashboardPositions() {
         amount: amount.toString(),
         totalInAmount: (layoutIncoming.get(id) ?? zero()).toString(),
         totalOutAmount: (layoutOutgoing.get(id) ?? zero()).toString(),
-        uniqueMemberCount:
-          [...(layoutMembers.get(id)?.values() ?? [])].filter((balance) =>
-            balance.greaterThan(0),
-          ).length,
+        uniqueMemberCount: [...(layoutMembers.get(id)?.values() ?? [])].filter(
+          (balance) => balance.greaterThan(0),
+        ).length,
+        allottedMemberCount: layoutSiteMembers.get(id)?.allotted.size ?? 0,
+        registeredMemberCount: layoutSiteMembers.get(id)?.registered.size ?? 0,
+        settledMemberCount: layoutSiteMembers.get(id)?.settled.size ?? 0,
+        notAllottedMemberCount: notAllottedByLayout.get(id) ?? 0,
       };
     })
     .sort((left, right) => left.name.localeCompare(right.name));
@@ -205,6 +269,10 @@ export async function getDashboardPositions() {
             .map(([memberId]) => memberId),
         ),
       ).size,
+      allottedMemberCount: siteMemberTotals.allotted,
+      registeredMemberCount: siteMemberTotals.registered,
+      settledMemberCount: siteMemberTotals.settled,
+      notAllottedMemberCount: siteMemberTotals.notAllotted,
       layouts: layoutDeposits,
     },
   };

@@ -4,7 +4,10 @@ import { calculateTotalAmount, getTransactionFormConfig } from './transactionRul
 
 export type ValidationErrors = Record<string, string>;
 
-export function validateTransaction(form: TransactionPayload): ValidationErrors {
+export function validateTransaction(
+  form: TransactionPayload,
+  memberJoinDate?: string | null,
+): ValidationErrors {
   const errors: ValidationErrors = {};
 
   if (!form.transactionDate) {
@@ -34,6 +37,15 @@ export function validateTransaction(form: TransactionPayload): ValidationErrors 
   }
   if (config.requiredMember && !form.memberId) {
     errors.memberId = 'Select a member for this transaction subtype.';
+  }
+  if (form.memberId) {
+    const joinDate = memberJoinDate?.slice(0, 10);
+    const transactionDate = form.transactionDate.slice(0, 10);
+    if (!joinDate) {
+      errors.memberId = 'The selected member has no joining date and cannot be used.';
+    } else if (joinDate > transactionDate) {
+      errors.memberId = 'The selected member joined after the transaction date.';
+    }
   }
   if (config.requiredParty && !form.partyId) {
     errors.partyId = 'Select a party for this transaction subtype.';
